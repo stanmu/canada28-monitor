@@ -1,0 +1,41 @@
+name: Publish statistics website
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate static output
+        run: |
+          node --check dist/assets/app.js
+          node --check dist/assets/config.js
+          python3 - <<'PY'
+          from pathlib import Path
+          required={'index.html','.nojekyll','assets/app.js','assets/style.css','assets/config.js'}
+          actual={str(p.relative_to('dist')) for p in Path('dist').rglob('*') if p.is_file()}
+          assert actual==required,actual
+          assert './assets/app.js' in Path('dist/index.html').read_text()
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
