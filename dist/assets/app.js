@@ -106,10 +106,29 @@ $('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form')
 /* ---------- 自动投注（云端计划 + 本机执行器） ---------- */
 let autobetData=null;
 function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
+function renderAutobetStatus(s){
+  const on=s.enabled;
+  const dot=$('#ab-dot');
+  dot.className='ab-dot '+(on?(s.dry_run?'':'run'):'stop');
+  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : '已停止';
+  const stop=s.stop;
+  $('#ab-state-sub').textContent = on
+    ? '云端每 20 秒出计划，执行器逐号下单并回报台账'
+    : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未启用');
+  const n=s.next||{};
+  $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
+  $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
+  const last=(s.orders||[])[0];
+  $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
+  $('#ab-kpi-spent').textContent = s.stake_total? (s.stake_total+' 元') : '0 元';
+  $('#ab-kpi-left').textContent = s.budget_left!=null? (s.budget_left+' 元') : '—';
+  $('#ab-stop').disabled = !on;
+}
 function renderAutobet(s){
   autobetData=s;
+  renderAutobetStatus(s);
   const on=s.enabled;
-  autobetBadge(on?(s.dry_run?'模拟运行中':'真实投注已开启'):'未启用',on?(s.dry_run?'warn':''):'neutral');
+  autobetBadge(on?(s.dry_run?'模拟运行中':'真实投注已开启'):'已停止',on?(s.dry_run?'warn':''):'neutral');
   $('#stake-exec-state').textContent=on?(s.dry_run?'模拟中':'真实投注'):'未启用';
   if(!$('#autobet-site').value)$('#autobet-site').value=s.site||'https://s4.sd3568.xyz';
   if(!$('#autobet-account').value)$('#autobet-account').value=s.account||'';
@@ -218,4 +237,13 @@ $('#autobet-copy').onclick=()=>action($('#autobet-copy'),async()=>{
   const v=$('#autobet-script').value;
   if(!v){toast('先生成脚本',true);return}
   try{await navigator.clipboard.writeText(v);toast('已复制')}catch{ $('#autobet-script').select();toast('已选中，请手动复制') }
+});
+
+
+/* 紧急停止：立刻关闭开关，执行器下一批前中止 */
+$('#ab-stop').onclick=()=>action($('#ab-stop'),async()=>{
+  if(!confirm('确认紧急停止？\n将立刻停止自动投注，执行器在当前批次结束后中止。')) return;
+  const r=await api('/api/v1/autobet/stop',{method:'POST'});
+  await loadAutobet();
+  toast('已紧急停止：'+String(r.stopped_at).slice(11,19));
 });
