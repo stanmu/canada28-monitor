@@ -5,7 +5,7 @@ let sessionToken='',simulationCsv='';
 let csrf='', statusData=null, activePage='overview', reportData=[], currentNumbers=[], currentVariant='4', currentRows=[];
 const PERIOD_PAGE_SIZE=60;
 let periodsGeneration=0,periodsBusy=false,periodsHasMore=true,periodsKey='',overviewGeneration=0;
-const pages={overview:['运行总览','LIVE OVERVIEW','看清每一次变化','两套方案独立运行，开奖后按规则自动切换。'],reports:['每日回测','DAILY REPORTS','用数据还原每一天','五套统计分别展示，连续未中按恰好段长计数。'],numbers:['号码生成','NUMBER GENERATOR','生成一份清楚的号码表','选择方案，复制或下载全部有序三位号码。'],settings:['提醒设置','NOTIFICATIONS','让提醒按你的规则到达','每日飞书报告，实时飞书与Bark连续未中提醒。'],staking:['倍投计划','HISTORICAL SIMULATION','设置你的模拟规则','自由搭配组合、金额与切换门槛，使用历史数据模拟。']};
+const pages={overview:['运行总览','LIVE OVERVIEW','看清每一次变化','两套方案独立运行，开奖后按规则自动切换。'],reports:['每日回测','DAILY REPORTS','用数据还原每一天','五套统计分别展示，连续未中按恰好段长计数。'],numbers:['号码生成','NUMBER GENERATOR','生成一份清楚的号码表','选择方案，复制或下载全部有序三位号码。'],settings:['提醒设置','NOTIFICATIONS','让提醒按你的规则到达','每日飞书报告，实时飞书与Bark连续未中提醒。'],staking:['自动投注','PLAN & EXECUTION','把计划接到真实下单','云端出计划与台账，本机执行器完成登录后的逐号下单。']};
 const fmt=n=>n==null?'—':Number(n).toLocaleString('zh-CN');
 const rate=n=>n==null?'—':(n*100).toFixed(2)+'%';
 const mode=m=>m==='no_double'?'无对子':'有兄弟';
@@ -16,7 +16,7 @@ function toast(message,error=false){$('#toast').textContent=message;$('#toast').
 async function request(path,options={}){return fetch(API_BASE+path,{...options,credentials:API_BASE?'omit':'same-origin',headers:{'Content-Type':'application/json',...(csrf?{'X-CSRF-Token':csrf}:{}),...(sessionToken?{'Authorization':'Bearer '+sessionToken}:{}),...options.headers}})}
 async function api(path,options={}){const response=await request(path,options);let data;try{data=await response.json()}catch{throw Error('服务器响应暂不可用')}if(!response.ok){if(response.status===401){$('#app').hidden=true;$('#login').hidden=false}throw Error(typeof data.detail==='string'?data.detail:'输入格式不正确，请检查')}return data}
 async function action(button,fn){button.disabled=true;try{await fn()}catch(e){toast(e.message,true)}finally{button.disabled=false}}
-function showPage(page){if(!pages[page])page='overview';activePage=page;const [name,kicker,title,desc]=pages[page];$('#page-breadcrumb').textContent=name;$('#page-kicker').textContent=kicker;$('#page-title').textContent=title;$('#page-description').textContent=desc;$$('.page').forEach(x=>x.hidden=x.id!=='page-'+page);$$('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));location.hash=page;if(page==='reports')loadReports().catch(e=>toast(e.message,true));if(page==='numbers')loadNumbers(currentVariant).catch(e=>toast(e.message,true));if(page==='settings')loadSettings().catch(e=>toast(e.message,true));if(page==='staking')loadStake().catch(e=>toast(e.message,true))}
+function showPage(page){if(!pages[page])page='overview';activePage=page;const [name,kicker,title,desc]=pages[page];$('#page-breadcrumb').textContent=name;$('#page-kicker').textContent=kicker;$('#page-title').textContent=title;$('#page-description').textContent=desc;$$('.page').forEach(x=>x.hidden=x.id!=='page-'+page);$$('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));location.hash=page;if(page==='reports')loadReports().catch(e=>toast(e.message,true));if(page==='numbers')loadNumbers(currentVariant).catch(e=>toast(e.message,true));if(page==='settings')loadSettings().catch(e=>toast(e.message,true));if(page==='staking'){loadStake().catch(e=>toast(e.message,true));loadAutobet().catch(e=>toast(e.message,true))}}
 function renderStatus(s){statusData=s;const warn=[];if(s.conflict)warn.push('数据冲突待核对：策略已暂停新数据合并。');if(s.gap)warn.push(`缺少 ${s.gap.missing} 期（${s.gap.before}—${s.gap.after}），等待补采后继续计算。`);if(s.collector_error)warn.push(s.collector_error);if(!s.configured.feishu||!s.configured.bark_devices)warn.push('通知待配置：请在提醒设置中填写飞书与Bark连接。');if(s.time_warning)warn.push('历史源有时间倒序记录；保留来源时间，回测按连续期号执行。');$('#system-banner').hidden=!warn.length;$('#system-banner').textContent=warn.join('　');const good=s.last_sync&&!s.collector_error&&!s.gap&&!s.conflict;$('#aside-health').textContent=good?'采集运行中':'采集待就绪';$('#sync-label').textContent=s.last_sync?'同步 '+s.last_sync.slice(11,19)+' 北京':'尚未完成在线同步';if(s.latest){$('#latest-code').textContent=s.latest.code;$('#latest-issue').textContent='第 '+s.latest.issue+' 期';$('#latest-time').textContent=s.latest.time.replace('T',' ')}$('#daily-clock').textContent=s.settings.daily_enabled?'每日 '+s.settings.daily_time:'日报已暂停';const channels=[['飞书日报',s.configured.feishu?'已配置':'待配置'],['Bark实时提醒',s.configured.bark_devices?s.configured.bark_devices+'台设备':'待配置'],['报警阈值','连续'+s.settings.alarm_threshold+'次未中'],['历史记录',fmt(s.history.records)+'期']];$('#channel-status').innerHTML=channels.map(([a,b])=>`<div class="status-line"><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join('')}
 function renderCards(report){$('#strategy-cards').innerHTML=['auto4','auto5'].map((id,i)=>{const c=report.cases[id],s=statusData?.states[id]||{},v=i?'5':'4';return `<article class="strategy-card ${i?'five':''}"><div class="card-top"><div class="case-label"><span class="case-number">${v}</span><div><b>自动方案 ${v}</b><small>${i?'516组 · 包含1 / 9':'480组 · 包含0 / 9'}</small></div></div><span class="badge ${s.mode==='no_double'?'warn':''}">下期 · ${mode(s.mode)}</span></div><div class="card-middle"><strong>${rate(c.hit_rate)}</strong><span>所选日命中率</span></div><div class="card-progress"><i style="width:${(c.hit_rate||0)*100}%"></i></div><div class="card-bottom"><div><span>✅ 命中 / ❌ 未中</span><b>${fmt(c.hits)} / ${fmt(c.misses)}</b></div><div><span>当前连续未中</span><b>${s.loss_streak??'—'} <small>次</small></b></div><div><span>当日最长错</span><b>${c.daily_max_loss} <small>次</small></b></div></div></article>`}).join('')}
 function drawChart(rows4,rows5){const hours=Array.from({length:24},(_,h)=>h),all=[rows4,rows5];const lines=all.map((rows,index)=>{const pts=[];for(const h of hours){const rs=rows.filter(r=>Number(r.time.slice(11,13))===h);if(rs.length)pts.push([32+h*24,145-100*rs.reduce((a,r)=>a+r.hit,0)/rs.length])}const d=pts.map((p,i)=>(i?'L':'M')+p.join(',')).join(' ');return `<path d="${d}" fill="none" stroke="${index?'#ad8c52':'#457755'}" stroke-width="2.2" ${index?'stroke-dasharray="5 4"':''}/>${pts.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.2" fill="${index?'#ad8c52':'#457755'}"/>`).join('')}`}).join('');$('#hourly-chart').innerHTML=`<svg viewBox="0 0 610 177" role="img" aria-label="所选日两套方案每小时命中率"><g stroke="#e8ede2" stroke-dasharray="3 4">${[45,95,145].map(y=>`<line x1="32" y1="${y}" x2="585" y2="${y}"/>`).join('')}</g><text x="0" y="49">100</text><text x="5" y="99">50</text><text x="12" y="149">0</text>${[0,4,8,12,16,20,23].map(h=>`<text x="${25+h*24}" y="171">${String(h).padStart(2,'0')}</text>`).join('')}${lines}</svg>`}
@@ -102,3 +102,68 @@ document.addEventListener('click',event=>{const a=event.target.closest('a');if(!
 
 function invalidateSimulation(){if(!simulationCsv)return;simulationCsv='';$('#download-simulation').hidden=true;$('#simulation-summary').innerHTML='';$('#simulation-rows').innerHTML='';$('#simulation-note').textContent='配置或日期已更改，请重新运行模拟。'}
 $('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form').addEventListener('change',invalidateSimulation);$('#simulation-start').onchange=invalidateSimulation;$('#simulation-end').onchange=invalidateSimulation;
+
+/* ---------- 自动投注（云端计划 + 本机执行器） ---------- */
+let autobetData=null;
+function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
+function renderAutobet(s){
+  autobetData=s;
+  const on=s.enabled;
+  autobetBadge(on?(s.dry_run?'模拟运行中':'真实投注已开启'):'未启用',on?(s.dry_run?'warn':''):'neutral');
+  $('#stake-exec-state').textContent=on?(s.dry_run?'模拟中':'真实投注'):'未启用';
+  if(!$('#autobet-site').value)$('#autobet-site').value=s.site||'https://s4.sd3568.xyz';
+  if(!$('#autobet-account').value)$('#autobet-account').value=s.account||'';
+  $('#autobet-dry').checked=!!s.dry_run;
+  $('#autobet-lead').value=s.lead_seconds||90;
+  const n=s.next;
+  $('#autobet-plan').innerHTML = (!n||n.blocked)
+    ? `<p class="field-note">${esc(n?.blocked||'先在下方保存一份金额计划草稿')}</p>`
+    : `<div class="plan-grid">
+        <div><small>第几把</small><b>第 ${n.round} 把</b></div>
+        <div><small>号码组合</small><b>${n.group_count} 组</b></div>
+        <div><small>每组金额</small><b>${esc(n.amount)}</b></div>
+        <div><small>本期合计</small><b>${esc(n.planned_stake)}</b></div>
+        <div><small>金额阶段</small><b>${n.phase}</b></div>
+        <div><small>连续未中</small><b>${s.state.loss} 次</b></div>
+      </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期计划注数 ${n.count}。上次投注期号：${s.state.last_issue??'—'}。</p>`;
+  $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
+     <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
+     <td>${o.placed}</td>
+     <td><span class="badge ${o.status==='settled'?'':'neutral'}">${o.status==='settled'?'已结算':'待结算'}</span></td>
+     <td>${o.code?esc(o.code)+(o.hit?' ✅':' ❌'):'—'}</td>
+     <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
+}
+async function loadAutobet(){const s=await api('/api/v1/autobet/status');renderAutobet(s)}
+function autobetSettingsBody(base){
+  return {...base,autobet_enabled:autobetData?autobetData.enabled:false,
+    autobet_dry_run:$('#autobet-dry').checked,
+    autobet_site:$('#autobet-site').value.trim()||'https://s4.sd3568.xyz',
+    autobet_lead_seconds:Number($('#autobet-lead').value)||90,
+    autobet_account:$('#autobet-account').value.trim()};
+}
+$('#autobet-save').onclick=()=>action($('#autobet-save'),async()=>{
+  const {settings:s}=await api('/api/settings');
+  const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
+  await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
+  const cookie=$('#autobet-cookie').value.trim();
+  if(cookie){await api('/api/credentials',{method:'PUT',body:JSON.stringify({autobet_cookie:cookie})});$('#autobet-cookie').value=''}
+  await loadAutobet();toast(cookie?'连接设置与会话已保存':'连接设置已保存');
+});
+$('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
+  const cookie=$('#autobet-cookie').value.trim();
+  if(cookie){await api('/api/credentials',{method:'PUT',body:JSON.stringify({autobet_cookie:cookie})});$('#autobet-cookie').value=''}
+  const r=await api('/api/v1/autobet/session/read',{method:'POST'});
+  toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
+});
+$('#autobet-enable').onclick=()=>action($('#autobet-enable'),async()=>{
+  const {settings:s}=await api('/api/settings');
+  const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
+  await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
+  const r=await api('/api/v1/staking/activate',{method:'POST'});
+  await loadAutobet();toast(r.enabled?'自动投注已开启，等待本机执行器下单':'已开启');
+});
+$('#autobet-disable').onclick=()=>action($('#autobet-disable'),async()=>{
+  await api('/api/v1/staking/deactivate',{method:'POST'});await loadAutobet();toast('自动投注已暂停');
+});
+$('#autobet-reload').onclick=()=>action($('#autobet-reload'),loadAutobet);
