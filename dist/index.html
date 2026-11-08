@@ -31,7 +31,15 @@
 <label class="inline-check"><input id="autobet-dry" type="checkbox" checked>模拟模式（只下发不真实下单）</label>
 <label>提前停盘多少秒下单<input id="autobet-lead" type="number" min="10" max="600" value="90"></label>
 <div class="autobet-actions"><button id="autobet-enable" class="primary" type="button">启用自动投注</button><button id="autobet-disable" class="secondary" type="button">暂停</button></div>
-</div></div>
+</div>
+<div class="autobet-box autobet-universal"><h3>3 · 手机 / 任意设备下单脚本</h3>
+<p class="field-note">不依赖这台电脑。在<b>已登录投注站的同一浏览器</b>里执行一次脚本，它会在站点页面内按本期计划逐号下单并回报台账。</p>
+<button id="autobet-make" class="secondary" type="button">生成下单脚本</button>
+<p class="field-note" id="autobet-make-hint">iPhone：Safari 收藏一个书签，把地址改成这段 javascript；安卓/电脑：地址栏粘贴后回车。</p>
+<textarea id="autobet-script" rows="4" readonly placeholder="点上面按钮生成"></textarea>
+<div class="autobet-actions"><button id="autobet-copy" class="secondary" type="button">复制脚本</button></div>
+</div>
+</div>
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>下单笔数</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>

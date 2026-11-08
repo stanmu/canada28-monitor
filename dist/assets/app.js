@@ -167,3 +167,41 @@ $('#autobet-disable').onclick=()=>action($('#autobet-disable'),async()=>{
   await api('/api/v1/staking/deactivate',{method:'POST'});await loadAutobet();toast('自动投注已暂停');
 });
 $('#autobet-reload').onclick=()=>action($('#autobet-reload'),loadAutobet);
+
+/* 通用下单脚本：在投注站页面内执行，任何设备可用 */
+function buildBetScript(token, csrf, base, budgetLeft){
+  const code = `javascript:(async()=>{try{
+const B=${JSON.stringify(base)},T=${JSON.stringify(token)},C=${JSON.stringify(csrf)};
+const H={'Authorization':'Bearer '+T,'X-CSRF-Token':C,'Content-Type':'application/json'};
+const p=await (await fetch(B+'/api/v1/autobet/plan',{headers:H})).json();
+if(p.blocked){alert('计划未就绪：'+p.blocked);return}
+const left=${Number(budgetLeft)||10}, unit=parseFloat(p.amount);
+let nums=p.numbers.slice(); const cap=Math.max(0,Math.floor(left/unit));
+if(nums.length>cap){nums=nums.slice(0,cap); if(!nums.length){alert('测试预算不足一注（剩余'+left+'元）');return}}
+if(!confirm('第'+p.round+'把 · '+p.group_count+'组 · 每组'+p.amount+'\\n本期共'+p.count+'注，合计约'+(p.amount*p.count).toFixed(2)+'\\n确认在站点下单？'))return;
+const h=await (await fetch('/initHome?awaken=180')).json();
+const ltn=(h.lottry||{}).ltn; if(!ltn){alert('取不到期号，请确认已登录');return}
+const am=Math.round(parseFloat(p.amount)*10000); let ok=0,fail=0,msg='';
+for(let i=0;i<nums.length;i+=80){
+  const chunk=nums.slice(i,i+80).map(n=>({nm:n}));
+  const body=new URLSearchParams({'paramMap.nms':JSON.stringify(chunk),'paramMap.bw':'1','paramMap.ltn':ltn,'paramMap.am':String(am),'paramMap.ock':(Date.now().toString(16)+Math.random().toString(16).slice(2,12))});
+  const r=await (await fetch('/lot/beting',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body})).json();
+  ok+=r.scc||0; fail+=r.fdc||0; if(r.msg)msg=String(r.msg).slice(0,60);
+}
+await fetch(B+'/api/v1/autobet/report',{method:'POST',headers:H,body:JSON.stringify({issue:+ltn,round:p.round,group_count:p.group_count,amount:p.amount,placed:ok,note:'web '+msg})});
+alert('第'+ltn+'期下单完成：成功'+ok+'注，失败'+fail+'注'+(msg?'\\n'+msg:''));
+}catch(e){alert('执行失败：'+(e&&e.message||e))}})()`;
+  return code;
+}
+$('#autobet-make').onclick=()=>action($('#autobet-make'),async()=>{
+  const r=await api('/api/v1/autobet/token',{method:'POST'});
+  const st=await api('/api/v1/autobet/status');
+  const base=(window.P911_CONFIG?.apiBase||location.origin).replace(/\/$/,'');
+  $('#autobet-script').value=buildBetScript(r.token,r.csrf,base,st.budget_left);
+  toast('脚本已生成，12 小时内有效');
+});
+$('#autobet-copy').onclick=()=>action($('#autobet-copy'),async()=>{
+  const v=$('#autobet-script').value;
+  if(!v){toast('先生成脚本',true);return}
+  try{await navigator.clipboard.writeText(v);toast('已复制')}catch{ $('#autobet-script').select();toast('已选中，请手动复制') }
+});
