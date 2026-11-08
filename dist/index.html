@@ -70,6 +70,17 @@
 <div class="autobet-actions"><button id="autobet-copy" class="secondary" type="button">复制脚本</button></div>
 </div>
 </div>
+<article class="panel site-panel"><div class="panel-heading"><div><h2>投注站账户 · 注单与盈亏</h2><p>由执行器每 60 秒只读同步一次；这里不产生任何投注。</p></div><span id="site-sync-at" class="muted"></span></div>
+<div class="site-kpis">
+  <div><small>账户</small><b id="site-account">—</b></div>
+  <div><small>可用余额</small><b id="site-balance">—</b></div>
+  <div><small>信用额度</small><b id="site-credit">—</b></div>
+  <div><small>累计投入</small><b id="site-stake">—</b></div>
+  <div><small>累计中奖返还</small><b id="site-bonus">—</b></div>
+  <div><small>累计盈亏</small><b id="site-net">—</b></div>
+</div>
+<div class="table-wrap"><table><thead><tr><th>期号</th><th>日期</th><th>注数</th><th>投入（元）</th><th>返还（元）</th><th>盈亏（元）</th></tr></thead><tbody id="site-bills"></tbody></table></div>
+</article>
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>下单笔数</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>
