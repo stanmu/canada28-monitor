@@ -110,11 +110,12 @@ function renderAutobetStatus(s){
   const on=s.enabled;
   const dot=$('#ab-dot');
   dot.className='ab-dot '+(on?(s.dry_run?'':'run'):'stop');
-  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : '已停止';
+  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : (s.stop_requested?'已停止':'待启动');
   const stop=s.stop;
+  const modeText = s.mode==='continuous' ? '连续运行' : '只跑本期';
   $('#ab-state-sub').textContent = on
-    ? '云端每 20 秒出计划，执行器逐号下单并回报台账'
-    : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未启用');
+    ? (modeText + (s.stop_requested?' · 已请求停止（本期后不再开新期）':' · 每 20 秒检查新一期'))
+    : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未运行');
   const n=s.next||{};
   $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
   $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
@@ -175,16 +176,24 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   const r=await api('/api/v1/autobet/session/read',{method:'POST'});
   toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
 });
-$('#autobet-enable').onclick=()=>action($('#autobet-enable'),async()=>{
-  const {settings:s}=await api('/api/settings');
-  const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
-  await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
-  const r=await api('/api/v1/staking/activate',{method:'POST'});
-  await loadAutobet();toast(r.enabled?'自动投注已开启，等待本机执行器下单':'已开启');
+async function startRun(mode,btn){
+  await action(btn,async()=>{
+    const {settings:s}=await api('/api/settings');
+    const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
+    await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
+    await api('/api/v1/autobet/start',{method:'POST',body:JSON.stringify({mode})});
+    await loadAutobet();
+    toast(mode==='single'?'已启动：只跑下一期':'已启动：连续运行');
+  });
+}
+$('#autobet-start-once').onclick=()=>startRun('single',$('#autobet-start-once'));
+$('#autobet-start-cont').onclick=()=>startRun('continuous',$('#autobet-start-cont'));
+$('#autobet-stop-soft').onclick=()=>action($('#autobet-stop-soft'),async()=>{
+  await api('/api/v1/autobet/stop_soft',{method:'POST'});
+  await loadAutobet();
+  toast('已请求停止：当前批次跑完、本期后不再开新期');
 });
-$('#autobet-disable').onclick=()=>action($('#autobet-disable'),async()=>{
-  await api('/api/v1/staking/deactivate',{method:'POST'});await loadAutobet();toast('自动投注已暂停');
-});
+
 $('#autobet-reload').onclick=()=>action($('#autobet-reload'),loadAutobet);
 
 /* 通用下单脚本：在投注站页面内执行，任何设备可用 */
