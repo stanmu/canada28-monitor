@@ -5,7 +5,7 @@ let sessionToken='',simulationCsv='';
 let csrf='', statusData=null, activePage='overview', reportData=[], currentNumbers=[], currentVariant='4', currentRows=[];
 const PERIOD_PAGE_SIZE=60;
 let periodsGeneration=0,periodsBusy=false,periodsHasMore=true,periodsKey='',overviewGeneration=0;
-const pages={overview:['运行总览','LIVE OVERVIEW','看清每一次变化','两套方案独立运行，开奖后按规则自动切换。'],reports:['每日回测','DAILY REPORTS','用数据还原每一天','五套统计分别展示，连续未中按恰好段长计数。'],numbers:['号码生成','NUMBER GENERATOR','生成一份清楚的号码表','选择方案，复制或下载全部有序三位号码。'],settings:['提醒设置','NOTIFICATIONS','让提醒按你的规则到达','每日飞书报告，实时飞书与Bark连续未中提醒。'],staking:['倍投计划','RESERVED INTERFACE','先保存你的金额计划','每组最低0.1。只保存草稿，执行功能待你确认。']};
+const pages={overview:['运行总览','LIVE OVERVIEW','看清每一次变化','两套方案独立运行，开奖后按规则自动切换。'],reports:['每日回测','DAILY REPORTS','用数据还原每一天','五套统计分别展示，连续未中按恰好段长计数。'],numbers:['号码生成','NUMBER GENERATOR','生成一份清楚的号码表','选择方案，复制或下载全部有序三位号码。'],settings:['提醒设置','NOTIFICATIONS','让提醒按你的规则到达','每日飞书报告，实时飞书与Bark连续未中提醒。'],staking:['倍投计划','HISTORICAL SIMULATION','设置你的模拟规则','自由搭配组合、金额与切换门槛，使用历史数据模拟。']};
 const fmt=n=>n==null?'—':Number(n).toLocaleString('zh-CN');
 const rate=n=>n==null?'—':(n*100).toFixed(2)+'%';
 const mode=m=>m==='no_double'?'无对子':'有兄弟';
