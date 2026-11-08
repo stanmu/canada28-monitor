@@ -148,7 +148,7 @@ function renderAutobet(s){
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
      <td>${o.placed}</td>
-     <td><span class="badge ${o.status==='settled'?'':'neutral'}">${o.status==='settled'?'已结算':'待结算'}</span></td>
+     <td><span class="badge ${o.status==='settled'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='partial'?'部分注单':'待结算')}</span></td>
      <td>${o.code?esc(o.code)+(o.hit?' ✅':' ❌'):'—'}</td>
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
