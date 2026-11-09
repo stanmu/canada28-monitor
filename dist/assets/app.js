@@ -159,7 +159,7 @@ function renderAutobet(s){
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
      <td>${o.placed}</td>
-     <td><span class="badge ${o.status==='settled'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='partial'?'部分注单':'待结算')}</span></td>
+     <td><span class="badge ${o.status==='settled'||o.status==='simulated'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='simulated'?'模拟结算':(o.status==='partial'?'部分注单':'待结算'))}</span></td>
      <td>${o.code?esc(o.code)+(o.hit?' ✅':' ❌'):'—'}</td>
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
@@ -358,4 +358,12 @@ $('#sp-save').onclick=()=>action($('#sp-save'),async()=>{
   await api('/api/v1/staking/special',{method:'PUT',body:JSON.stringify(rule)});
   // 同时打开状态机里的特殊规则开关（云端执行时生效）
   toast('特殊规则已保存；执行器会按此规则下单（模拟模式下不会真实提交）');
+});
+
+/* 重置把次（模拟预演常用） */
+$('#autobet-reset').onclick=()=>action($('#autobet-reset'),async()=>{
+  if(!confirm('把「当前第几把/金额阶段/连错」重置为初始状态？历史注单不受影响。')) return;
+  await api('/api/v1/autobet/reset',{method:'POST'});
+  await loadAutobet();
+  toast('已重置到第 1 把');
 });
