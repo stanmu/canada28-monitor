@@ -311,3 +311,31 @@ function renderSite(v){
     : '<tr><td colspan="6" class="empty">执行器会在 60 秒内同步一次；若长时间为空，检查会话是否失效。</td></tr>';
 }
 async function loadSite(){ try{ renderSite(await api('/api/v1/autobet/site')); }catch(e){} }
+
+/* 特殊把与当天翻倍（仅模拟） */
+let specialCsv='';
+$('#sp-run').onclick=()=>action($('#sp-run'),async()=>{
+  const start=$('#sp-start').value,end=$('#sp-end').value;
+  if(!start||!end){toast('请选择起止日期',true);return}
+  const body={...stakePayload(),start,end,rule:{
+    loss_trigger:Number($('#sp-loss').value),special_mode:$('#sp-mode').value,
+    special_amount:$('#sp-amount').value,double_losses:Number($('#sp-dloss').value),
+    double_within:Number($('#sp-within').value),double_factor:$('#sp-factor').value}};
+  const r=await api('/api/v1/staking/simulate_special',{method:'POST',body:JSON.stringify(body)});
+  const s=r;
+  $('#sp-summary').innerHTML=[['模拟期数',fmt(s.periods)],['总命中',fmt(s.hits)],
+    ['特殊把次数',fmt(s.specials)],['特殊把命中',fmt(s.special_hits)],
+    ['翻倍天数',fmt(s.double_days)],['总投入',s.stake],['总返还',s.gross],['净值',s.net]]
+    .map(([a,b])=>`<div class="total"><small>${esc(a)}</small><b>${esc(String(b))}</b></div>`).join('');
+  $('#sp-daily').innerHTML=(s.daily||[]).map(d=>`<tr><td>${esc(d.date)}</td><td>${d.periods}</td><td>${d.hits}</td>
+     <td>${d.specials}</td><td>${d.special_hits}</td><td>${d.doubled?'是':'否'}</td>
+     <td>${esc(d.stake)}</td><td>${esc(d.gross)}</td><td>${esc(d.net)}</td></tr>`).join('');
+  $('#sp-rows').innerHTML=(s.rows||[]).slice(0,120).map(x=>`<tr><td>${x.issue}<small>${esc(x.time.replace('T',' '))}</small></td>
+     <td>${esc(x.code)} ${x.hit?'✅':'❌'}</td><td>${x.kind}</td><td>${x.groups}</td><td>${esc(x.amount)}</td>
+     <td>${esc(x.factor)}</td><td>${esc(x.stake)}</td><td>${esc(x.gross)}</td></tr>`).join('');
+  specialCsv=[['期号','时间','号码','类型','组数','每组金额','倍数','命中','投入','返还','净值'].join(',')]
+    .concat((s.rows||[]).map(x=>[x.issue,x.time,x.code,x.kind,x.groups,x.amount,x.factor,x.hit,x.stake,x.gross,x.net].join(','))).join('\n');
+  $('#sp-csv').hidden=false;
+  toast('特殊规则模拟完成（未产生任何真实注单）');
+});
+$('#sp-csv').onclick=()=>{const url=URL.createObjectURL(new Blob(["\ufeff"+specialCsv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='特殊把模拟明细.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};

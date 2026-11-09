@@ -32,7 +32,30 @@
   <li>高金额阶段只累计 <b>480 / 516 组的兄弟命中</b>，<b>720 无对子命中不算</b>；累计达标后下一把恢复正常金额。</li>
   <li>正常阶段任意一把命中即回到第 1 把；末把未中则循环回第 1 把。</li>
 </ul>
-</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划草稿</button></form><div class="simulation-run"><h2>历史模拟回测</h2><p class="field-note">按把次由小到大循环，任一期命中后回到首把。区间首期从正常金额、首把开始，跨日不重置。使用当前表单配置，仅模拟，不保存或执行订单。</p><div class="filter-bar"><label>开始日期<input id="simulation-start" type="date" required></label><label>结束日期<input id="simulation-end" type="date" required></label><button id="run-simulation" type="button" class="primary">运行模拟</button><button id="download-simulation" type="button" class="secondary" hidden>下载完整明细 CSV</button></div><div id="simulation-summary" class="report-totals"></div><div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>本期阶段 / 把次</th><th>组数 / 每组金额</th><th>高金额兄弟累计✅</th><th>下期阶段 / 把次</th><th>模拟净值 / 累计</th><th>切换说明</th></tr></thead><tbody id="simulation-rows"></tbody></table></div><p id="simulation-note" class="field-note"></p></div><p class="field-note">例如第1把480组、每组0.1，合计48；第2把720组、每组0.2，合计144。保存草稿不会改变日常统计；自动投注只在“自动投注”页启用后才执行。</p><article class="panel autobet-panel"><div class="panel-heading"><div><h2>自动投注 · 本机执行</h2><p>云端只保存计划与注单台账；真实下单在你本机的执行器完成，投注站密码不经过服务器。</p></div><span id="autobet-badge" class="badge neutral">未连接</span></div>
+</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划草稿</button></form><div class="special-run"><h2>特殊把与当天翻倍（仅模拟）</h2>
+<p class="field-note">连续 ❌ 达到门槛后先按正常金额等待一次命中；<b>命中后的下一把</b>才打特殊把，特殊把中或不中都重置回第 1 把、正常金额。</p>
+<div class="rule-grid">
+  <label><span>连续 ❌ 多少把后进入等待</span><input id="sp-loss" type="number" min="1" max="100" value="5"></label>
+  <label><span>特殊把号码（三选一）<select id="sp-mode"><option value="720">720 无对子</option><option value="729_gap">729 隔一行（参考上上期）</option><option value="729_adj">729 不隔行（参考上一期）</option></select></span></label>
+  <label><span>特殊把每组金额<input id="sp-amount" type="number" min="0.1" step="0.1" value="10"></span></label>
+</div>
+<div class="rule-grid">
+  <label><span>当天出现几连 ❌ 触发翻倍</span><input id="sp-dloss" type="number" min="1" max="100" value="6"></label>
+  <label><span>必须发生在当天前多少期内</span><input id="sp-within" type="number" min="1" max="1000" value="200"></label>
+  <label><span>翻倍倍数<input id="sp-factor" type="number" min="1" step="0.1" value="2"></span></label>
+</div>
+<p class="field-note">例：一天 402 期，若第 100 期出现 6 连 ❌ 且设置 200，则当天剩余期金额自动 ×2；若出现在第 200 期之后则不翻倍。</p>
+<div class="filter-bar">
+  <label>开始日期<input id="sp-start" type="date"></label>
+  <label>结束日期<input id="sp-end" type="date"></label>
+  <button id="sp-run" type="button" class="primary">运行特殊规则模拟</button>
+  <button id="sp-csv" type="button" class="secondary" hidden>下载明细 CSV</button>
+</div>
+<div id="sp-summary" class="report-totals"></div>
+<div class="table-wrap"><table><thead><tr><th>日期</th><th>期数</th><th>命中</th><th>特殊把</th><th>特殊命中</th><th>是否翻倍</th><th>投入</th><th>返还</th><th>净值</th></tr></thead><tbody id="sp-daily"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>类型</th><th>组数</th><th>每组金额</th><th>倍数</th><th>投入</th><th>返还</th></tr></thead><tbody id="sp-rows"></tbody></table></div>
+<p class="field-note">以上为历史模拟，不产生任何真实注单。</p></div>
+<div class="simulation-run"><h2>历史模拟回测</h2><p class="field-note">按把次由小到大循环，任一期命中后回到首把。区间首期从正常金额、首把开始，跨日不重置。使用当前表单配置，仅模拟，不保存或执行订单。</p><div class="filter-bar"><label>开始日期<input id="simulation-start" type="date" required></label><label>结束日期<input id="simulation-end" type="date" required></label><button id="run-simulation" type="button" class="primary">运行模拟</button><button id="download-simulation" type="button" class="secondary" hidden>下载完整明细 CSV</button></div><div id="simulation-summary" class="report-totals"></div><div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>本期阶段 / 把次</th><th>组数 / 每组金额</th><th>高金额兄弟累计✅</th><th>下期阶段 / 把次</th><th>模拟净值 / 累计</th><th>切换说明</th></tr></thead><tbody id="simulation-rows"></tbody></table></div><p id="simulation-note" class="field-note"></p></div><p class="field-note">例如第1把480组、每组0.1，合计48；第2把720组、每组0.2，合计144。保存草稿不会改变日常统计；自动投注只在“自动投注”页启用后才执行。</p><article class="panel autobet-panel"><div class="panel-heading"><div><h2>自动投注 · 本机执行</h2><p>云端只保存计划与注单台账；真实下单在你本机的执行器完成，投注站密码不经过服务器。</p></div><span id="autobet-badge" class="badge neutral">未连接</span></div>
 <div id="autobet-statusbar" class="autobet-statusbar">
   <div class="ab-state"><span id="ab-dot" class="ab-dot"></span><div><b id="ab-state-text">加载中</b><small id="ab-state-sub">正在读取运行状态</small></div></div>
   <div class="ab-kpis">
