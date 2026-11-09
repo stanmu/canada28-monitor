@@ -121,7 +121,7 @@ function renderAutobetStatus(s){
   const on=s.enabled;
   const dot=$('#ab-dot');
   dot.className='ab-dot '+(on?(s.dry_run?'':'run'):'stop');
-  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : (s.stop_requested?'已停止':'待启动');
+  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : '已停止';
   const stop=s.stop;
   const modeText = s.mode==='continuous' ? '连续运行' : '只跑本期';
   $('#ab-state-sub').textContent = on
