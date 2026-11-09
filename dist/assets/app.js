@@ -411,3 +411,14 @@ $('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
     toast(name+'已改动但未保存：点「保存连接设置」生效（点开始也会一并保存）');
   });
 });
+
+/* 第二处保存按钮：保存模拟模式/提前秒数/单期上限 */
+$('#autobet-save2').onclick=()=>action($('#autobet-save2'),async()=>{
+  const {settings:s}=await api('/api/settings');
+  const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
+  const body=autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical});
+  await api('/api/settings',{method:'PUT',body:JSON.stringify(body)});
+  await loadAutobet();
+  const dry=$('#autobet-dry').checked;
+  toast('执行设置已保存：模拟模式'+(dry?'开启（不会真实下单）':'关闭（会真实下单）'));
+});
