@@ -130,6 +130,8 @@ function renderAutobetStatus(s){
   const n=s.next||{};
   $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
   const cap=s.max_single||0, stake=n.blocked?0:Number(n.amount)*n.count;
+  const ra=document.getElementById('real-amount');
+  if(ra) ra.textContent = n.blocked? '—' : (stake.toFixed(2)+' 元');
   const capEl=$('#ab-cap-hint');
   if(capEl) capEl.textContent = cap>0 ? ('单期上限 '+cap+' 元' + (stake>cap? ' · 本期 '+stake.toFixed(2)+' 元已超限，会被拒绝':'')) : '未设单期上限';
   $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
@@ -192,25 +194,39 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   const r=await api('/api/v1/autobet/session/read',{method:'POST'});
   toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
 });
-async function startRun(mode,btn){
-  await action(btn,async()=>{
+async function runBet(mode, dry, btn){
+  await action(btn, async()=>{
     const st0=await api('/api/v1/autobet/status');
-    const willSimulate=$('#autobet-dry').checked || st0.dry_run;
-    if(!willSimulate && st0.gate===false){
-      toast('闸门是关闭的：请先点「开启闸门」，再点开始（本页不会替你开闸）',true);
-      return;
+    if(dry){
+      toast('模拟运行：不会开闸门、不会真实下单');
+    } else {
+      if(!st0.gate){
+        toast('闸门是关闭的：请先点「开启闸门」，再点真实运行', true);
+        return;
+      }
+      if(!$('#confirm-real').checked){
+        toast('真实运行需要先勾选「我知道这会花真钱」', true);
+        return;
+      }
+      if(!confirm('确认真实下单？\n本期计划：'+(st0.next && !st0.next.blocked
+        ? ('第'+st0.next.round+'把 · '+st0.next.group_count+'组 × '+st0.next.amount+' = '+(Number(st0.next.amount)*st0.next.count).toFixed(2)+' 元')
+        : '未配置'))) return;
+      await api('/api/settings',{method:'PUT',body:JSON.stringify(await realConfirmBody())});
     }
-    if(willSimulate){ toast('模拟模式：不会开闸门、不会真实下单'); }
-    const {settings:s}=await api('/api/settings');
-    const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
-    await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
-    await api('/api/v1/autobet/start',{method:'POST',body:JSON.stringify({mode})});
+    await api('/api/v1/autobet/start',{method:'POST',body:JSON.stringify({mode, dry})});
     await loadAutobet();
-    toast(mode==='single'?'已启动：只跑下一期':'已启动：连续运行');
+    toast(dry?('已开始模拟：'+(mode==='single'?'只跑一期':'连续跑'))
+            :('已开始真实下单：'+(mode==='single'?'只跑一期':'连续跑')));
   });
 }
-$('#autobet-start-once').onclick=()=>startRun('single',$('#autobet-start-once'));
-$('#autobet-start-cont').onclick=()=>startRun('continuous',$('#autobet-start-cont'));
+async function realConfirmBody(){
+  const {settings:s}=await api('/api/settings');
+  return {...s, autobet_confirm_real:true, autobet_dry_run:false, autobet_enabled:false};
+}
+$('#sim-once').onclick=()=>runBet('single', true, $('#sim-once'));
+$('#sim-cont').onclick=()=>runBet('continuous', true, $('#sim-cont'));
+$('#real-once').onclick=()=>runBet('single', false, $('#real-once'));
+$('#real-cont').onclick=()=>runBet('continuous', false, $('#real-cont'));
 $('#autobet-stop-soft').onclick=()=>action($('#autobet-stop-soft'),async()=>{
   await api('/api/v1/autobet/stop_soft',{method:'POST'});
   await loadAutobet();
