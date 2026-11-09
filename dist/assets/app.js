@@ -133,7 +133,7 @@ function renderAutobetStatus(s){
   const last=(s.orders||[])[0];
   $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
   $('#ab-kpi-spent').textContent = s.stake_total? (s.stake_total+' 元') : '0 元';
-  $('#ab-kpi-left').textContent = s.budget_left!=null? (s.budget_left+' 元') : '—';
+  $('#ab-kpi-left').textContent = '按计划';
   $('#ab-stop').disabled = !on;
 }
 function renderAutobet(s){
