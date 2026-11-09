@@ -339,3 +339,13 @@ $('#sp-run').onclick=()=>action($('#sp-run'),async()=>{
   toast('特殊规则模拟完成（未产生任何真实注单）');
 });
 $('#sp-csv').onclick=()=>{const url=URL.createObjectURL(new Blob(["\ufeff"+specialCsv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='特殊把模拟明细.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+
+/* 保存特殊规则（用于真实下单状态机） */
+$('#sp-save').onclick=()=>action($('#sp-save'),async()=>{
+  const rule={loss_trigger:Number($('#sp-loss').value),special_mode:$('#sp-mode').value,
+    special_amount:$('#sp-amount').value,double_losses:Number($('#sp-dloss').value),
+    double_within:Number($('#sp-within').value),double_factor:$('#sp-factor').value};
+  await api('/api/v1/staking/special',{method:'PUT',body:JSON.stringify(rule)});
+  // 同时打开状态机里的特殊规则开关（云端执行时生效）
+  toast('特殊规则已保存；执行器会按此规则下单（模拟模式下不会真实提交）');
+});
