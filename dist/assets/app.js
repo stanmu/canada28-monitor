@@ -445,3 +445,22 @@ $('#real-stop').onclick=()=>action($('#real-stop'),async()=>{
   await loadAutobet();
   toast('已停止真实下单并关闭闸门');
 });
+
+/* 每期新开奖自动把最新记录插到列表顶部（不重载、不打断阅读） */
+async function syncNewPeriods(){
+  if(!currentRows.length) return;
+  const sel=periodSelection();
+  try{
+    const rows=await api(`/api/periods?day=${sel.day}&case=${sel.selected}&history=${sel.history}&limit=${PERIOD_PAGE_SIZE}`);
+    const newest=rows.filter(r=>r.issue>(currentRows[0]?.issue||0)).sort((a,b)=>b.issue-a.issue);
+    if(!newest.length) return;
+    currentRows=[...newest,...currentRows];
+    $('#period-rows').insertAdjacentHTML('afterbegin', newest.map(periodRow).join(''));
+    updatePeriodControls();
+    $('#new-periods').hidden=true;
+    toast(`新开奖 ${newest.length} 期已加到顶部`);
+  }catch(e){}
+}
+setInterval(()=>{
+  if(!$('#app').hidden && activePage==='overview') syncNewPeriods();
+},15000);
