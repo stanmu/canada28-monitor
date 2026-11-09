@@ -400,3 +400,14 @@ $('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
   await loadAutobet();
   toast(next?'闸门已开启：允许下单':'闸门已关闭：任何下单请求都会被拒绝');
 });
+
+/* 连接设置改动提示：这些输入不会自动保存 */
+['autobet-dry','autobet-lead','autobet-maxsingle','autobet-site','autobet-account'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('change',()=>{
+    const name={ 'autobet-dry':'模拟模式','autobet-lead':'提前停盘秒数','autobet-maxsingle':'单期金额上限',
+                 'autobet-site':'站点地址','autobet-account':'投注账号' }[id];
+    toast(name+'已改动但未保存：点「保存连接设置」生效（点开始也会一并保存）');
+  });
+});
