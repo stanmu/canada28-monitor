@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261110-4"><script src="./assets/config.js?v=20261110-4" defer></script><script src="./assets/app.js?v=20261110-4" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261110-5"><script src="./assets/config.js?v=20261110-5" defer></script><script src="./assets/app.js?v=20261110-5" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -94,6 +94,7 @@
     <div class="run-actions">
       <button id="sim-once" class="primary" type="button">模拟跑一期</button>
       <button id="sim-cont" class="secondary" type="button">模拟连续跑</button>
+      <button id="sim-stop" class="secondary" type="button">停止模拟</button>
     </div>
   </div>
   <div class="run-block real">
@@ -103,10 +104,11 @@
     <div class="run-actions">
       <button id="real-once" class="danger" type="button">真实跑一期</button>
       <button id="real-cont" class="danger" type="button">真实连续跑</button>
+      <button id="real-stop" class="secondary" type="button">停止真实</button>
     </div>
   </div>
 </div>
-<div class="autobet-actions"><button id="autobet-save2" class="secondary" type="button">保存执行设置</button><button id="autobet-stop-soft" class="secondary" type="button">停止（本期后不再开新期）</button><button id="autobet-reset" class="secondary" type="button">重置到第 1 把</button></div>
+<div class="autobet-actions"><button id="autobet-save2" class="secondary" type="button">保存执行设置</button><button id="autobet-reset" class="secondary" type="button">重置到第 1 把</button></div>
 <p class="field-note">模拟按钮只走流程；真实按钮需要闸门开启并勾选确认，两者互不影响。</p>
 </div>
 <div class="autobet-box autobet-universal"><h3>3 · 手机 / 任意设备下单脚本</h3>

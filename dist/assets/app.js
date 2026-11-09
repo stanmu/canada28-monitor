@@ -227,11 +227,7 @@ $('#sim-once').onclick=()=>runBet('single', true, $('#sim-once'));
 $('#sim-cont').onclick=()=>runBet('continuous', true, $('#sim-cont'));
 $('#real-once').onclick=()=>runBet('single', false, $('#real-once'));
 $('#real-cont').onclick=()=>runBet('continuous', false, $('#real-cont'));
-$('#autobet-stop-soft').onclick=()=>action($('#autobet-stop-soft'),async()=>{
-  await api('/api/v1/autobet/stop_soft',{method:'POST'});
-  await loadAutobet();
-  toast('已请求停止：当前批次跑完、本期后不再开新期');
-});
+
 
 $('#autobet-reload').onclick=()=>action($('#autobet-reload'),async()=>{await loadAutobet();await loadSite()});
 
@@ -435,4 +431,17 @@ $('#autobet-save2').onclick=()=>action($('#autobet-save2'),async()=>{
   await loadAutobet();
   const dry=$('#autobet-dry').checked;
   toast('执行设置已保存：模拟模式'+(dry?'开启（不会真实下单）':'关闭（会真实下单）'));
+});
+
+/* 分开的停止：模拟停止不动闸门；真实停止同时关闸 */
+$('#sim-stop').onclick=()=>action($('#sim-stop'),async()=>{
+  const r=await api('/api/v1/autobet/stop_sim',{method:'POST'});
+  await loadAutobet();
+  toast('已停止模拟（闸门保持不变：'+(r.gate?'开启':'关闭')+'）');
+});
+$('#real-stop').onclick=()=>action($('#real-stop'),async()=>{
+  if(!confirm('停止真实下单？将立刻关闭开关并关闭闸门。')) return;
+  await api('/api/v1/autobet/stop_soft',{method:'POST'});
+  await loadAutobet();
+  toast('已停止真实下单并关闭闸门');
 });
