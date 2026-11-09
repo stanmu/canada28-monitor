@@ -197,10 +197,8 @@ async function startRun(mode,btn){
     const st0=await api('/api/v1/autobet/status');
     const willSimulate=$('#autobet-dry').checked || st0.dry_run;
     if(!willSimulate && st0.gate===false){
-      if(!confirm('下单闸门当前是关闭的。\n真实下注需要同时开启闸门，是否开启并继续？')){
-        toast('已取消：闸门仍关闭，不会下单');return;
-      }
-      await api('/api/v1/autobet/gate',{method:'POST',body:JSON.stringify({open:true})});
+      toast('闸门是关闭的：请先点「开启闸门」，再点开始（本页不会替你开闸）',true);
+      return;
     }
     if(willSimulate){ toast('模拟模式：不会开闸门、不会真实下单'); }
     const {settings:s}=await api('/api/settings');
