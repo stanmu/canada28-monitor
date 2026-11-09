@@ -83,7 +83,10 @@
 </div>
 <div class="autobet-box"><h3>2 · 本期执行计划</h3><div id="autobet-plan" class="autobet-plan"></div>
 <label class="inline-check"><input id="autobet-dry" type="checkbox" checked>模拟模式（只走流程、不真实提交）</label>
-<label>提前停盘多少秒下单<small class="hint">距停盘小于该秒数就跳过本期</small><input id="autobet-lead" type="number" min="10" max="600" value="90"></label>
+<div class="form-two">
+  <label>提前停盘多少秒下单<small class="hint">距停盘小于该秒数就跳过本期</small><input id="autobet-lead" type="number" min="10" max="600" value="90"></label>
+  <label>单期金额上限（元）<small class="hint">本期按计划算出的金额超过它就拒绝下单，不会偷偷少下</small><input id="autobet-maxsingle" type="number" min="0" step="0.1" value="20000"></label>
+</div>
 <div class="run-actions">
   <button id="autobet-start-once" class="primary" type="button">▶ 只跑本期</button>
   <button id="autobet-start-cont" class="secondary" type="button">▶▶ 连续运行</button>

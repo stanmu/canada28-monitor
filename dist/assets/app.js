@@ -129,6 +129,9 @@ function renderAutobetStatus(s){
     : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未运行');
   const n=s.next||{};
   $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
+  const cap=s.max_single||0, stake=n.blocked?0:Number(n.amount)*n.count;
+  const capEl=$('#ab-cap-hint');
+  if(capEl) capEl.textContent = cap>0 ? ('单期上限 '+cap+' 元' + (stake>cap? ' · 本期 '+stake.toFixed(2)+' 元已超限，会被拒绝':'')) : '未设单期上限';
   $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
   const last=(s.orders||[])[0];
   $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
@@ -146,6 +149,7 @@ function renderAutobet(s){
   if(!$('#autobet-account').value)$('#autobet-account').value=s.account||'';
   $('#autobet-dry').checked=!!s.dry_run;
   $('#autobet-lead').value=s.lead_seconds||90;
+  if(s.max_single!=null && !$('#autobet-maxsingle').dataset.touched) $('#autobet-maxsingle').value=s.max_single;
   const n=s.next;
   $('#autobet-plan').innerHTML = (!n||n.blocked)
     ? `<p class="field-note">${esc(n?.blocked||'先在下方保存一份金额计划草稿')}</p>`
@@ -171,7 +175,8 @@ function autobetSettingsBody(base){
     autobet_dry_run:$('#autobet-dry').checked,
     autobet_site:$('#autobet-site').value.trim()||'https://s4.sd3568.xyz',
     autobet_lead_seconds:Number($('#autobet-lead').value)||90,
-    autobet_account:$('#autobet-account').value.trim()};
+    autobet_account:$('#autobet-account').value.trim(),
+    autobet_max_single:Number($('#autobet-maxsingle').value||0)};
 }
 $('#autobet-save').onclick=()=>action($('#autobet-save'),async()=>{
   const {settings:s}=await api('/api/settings');
