@@ -79,3 +79,13 @@ button.danger:disabled{opacity:.5;cursor:not-allowed}
 
 .field-note + .field-note{margin-top:6px}
 label small.hint{display:block;font-size:11px;color:#8a9184;margin:2px 0 4px}
+
+.ab-gate{display:flex;align-items:center;gap:8px}
+.ab-gate .chip{padding:5px 10px;border-radius:99px;font-size:12px;background:rgba(47,158,87,.12);color:#2f6b45}
+.ab-gate .chip.off{background:rgba(192,57,43,.12);color:#a93226}
+.ab-gate button{padding:8px 12px;font-size:12px}
+
+.control-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;color:#5f675d;
+  background:rgba(69,119,85,.06);border-radius:12px;padding:10px 14px;margin:16px 0 6px}
+.control-legend b{color:#2f6b45}
+@media(max-width:820px){.control-legend{display:block;line-height:2}}

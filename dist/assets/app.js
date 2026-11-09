@@ -117,6 +117,7 @@ $('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form')
 let autobetData=null;
 function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
 function renderAutobetStatus(s){
+  try{renderGate(s)}catch(e){}
   const on=s.enabled;
   const dot=$('#ab-dot');
   dot.className='ab-dot '+(on?(s.dry_run?'':'run'):'stop');
@@ -366,4 +367,22 @@ $('#autobet-reset').onclick=()=>action($('#autobet-reset'),async()=>{
   await api('/api/v1/autobet/reset',{method:'POST'});
   await loadAutobet();
   toast('已重置到第 1 把');
+});
+
+/* 下单闸门 */
+function renderGate(s){
+  const chip=$('#ab-gate-chip'), btn=$('#ab-gate-toggle');
+  if(!chip) return;
+  const open=s.gate!==false;
+  chip.textContent='闸门：'+(open?'开启（允许下单）':'关闭（禁止下单）');
+  chip.className='chip'+(open?'':' off');
+  btn.textContent=open?'关闭闸门':'开启闸门';
+  btn.dataset.next=open?'false':'true';
+}
+$('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
+  const next=$('#ab-gate-toggle').dataset.next!=='false';
+  if(!next && !confirm('关闭闸门后：执行器即使运行也会被拒绝下单（模拟测试也不会花钱）。确认关闭？')) return;
+  await api('/api/v1/autobet/gate',{method:'POST',body:JSON.stringify({open:next})});
+  await loadAutobet();
+  toast(next?'闸门已开启：允许下单':'闸门已关闭：任何下单请求都会被拒绝');
 });
