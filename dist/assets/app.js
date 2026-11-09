@@ -189,6 +189,13 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
 });
 async function startRun(mode,btn){
   await action(btn,async()=>{
+    const st0=await api('/api/v1/autobet/status');
+    if(st0.gate===false){
+      if(!confirm('下单闸门当前是关闭的。\n开始运行需要同时开启闸门，是否开启并继续？')){
+        toast('已取消：闸门仍关闭，不会下单');return;
+      }
+      await api('/api/v1/autobet/gate',{method:'POST',body:JSON.stringify({open:true})});
+    }
     const {settings:s}=await api('/api/settings');
     const {alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}=s;
     await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({alarm_enabled,alarm_cases,alarm_threshold,daily_enabled,daily_time,bark_cooldown,bark_critical}))});
