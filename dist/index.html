@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261110-6"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261110-6" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261110-stability"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261110-stability" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -32,7 +32,7 @@
   <li>高金额阶段只累计 <b>480 / 516 组的兄弟命中</b>，<b>720 无对子命中不算</b>；累计达标后下一把恢复正常金额。</li>
   <li>正常阶段任意一把命中即回到第 1 把；末把未中则循环回第 1 把。</li>
 </ul>
-</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划草稿</button></form><div class="special-run"><h2>特殊把与当天翻倍（仅模拟）</h2>
+</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划草稿</button></form><div class="special-run"><label><input id="sp-enabled" type="checkbox"> 启用特殊规则（关闭后使用普通计划）</label><h2>特殊把与当天翻倍</h2>
 <p class="field-note">连续 ❌ 达到门槛后先按正常金额等待一次命中；<b>命中后的下一把</b>才打特殊把，特殊把中或不中都重置回第 1 把、正常金额。保存后该规则会用于真实下单（受“模拟模式”开关保护）。</p>
 <div class="rule-grid">
   <label class="cfg"><span>连续 ❌ 多少把后进入等待</span><input id="sp-loss" type="number" min="1" max="100" value="5"><small>连错达到这个数后，继续按正常金额打，等一次命中</small></label>
@@ -52,7 +52,7 @@
   <button id="sp-run" type="button" class="primary">运行特殊规则模拟</button>
   <button id="sp-csv" type="button" class="secondary" hidden>下载明细 CSV</button>
 </div>
-<div id="sp-summary" class="report-totals"></div>
+<p id="sp-note" class="field-note"></p><div id="sp-summary" class="report-totals"></div>
 <div class="table-wrap"><table><thead><tr><th>日期</th><th>期数</th><th>命中</th><th>特殊把</th><th>特殊命中</th><th>是否翻倍</th><th>投入</th><th>返还</th><th>净值</th></tr></thead><tbody id="sp-daily"></tbody></table></div>
 <div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>类型</th><th>组数</th><th>每组金额</th><th>倍数</th><th>投入</th><th>返还</th></tr></thead><tbody id="sp-rows"></tbody></table></div>
 <p class="field-note">以上为历史模拟，不产生任何真实注单。</p></div>
@@ -133,6 +133,6 @@
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>下单笔数</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>
-<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.4 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
+<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.5 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
 </main></div></div><div id="toast" role="status" hidden></div>
 </body></html>
