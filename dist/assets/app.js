@@ -199,8 +199,9 @@ $('#autobet-save').onclick=()=>action($('#autobet-save'),async()=>{
 $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   const cookie=$('#autobet-cookie').value.trim();
   if(cookie){await api('/api/credentials',{method:'PUT',body:JSON.stringify({autobet_cookie:cookie})});$('#autobet-cookie').value=''}
-  const r=await api('/api/v1/autobet/session/read',{method:'POST'});
-  toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
+  const status=await api('/api/v1/session/status');
+  if(status.online&&!status.pending){await api('/api/v1/session/command',{method:'POST',body:JSON.stringify({action:'check'})});toast('已请求上海服务器只读校验；不会提交登录或开启执行');}
+  else toast('会话已保存；服务器离线或上一操作尚未完成，请稍后仅检查会话');
 });
 async function runBet(mode, dry, btn){
   if(!dry&&$('#autobet-dry').checked){toast('模拟保护开启：请先关闭模拟并保存，再手动开始真实运行',true);return;}
@@ -516,11 +517,13 @@ let serverSession=null;
 async function loadServerSession(){
  const s=await api('/api/v1/session/status'),previous=serverSession;serverSession=s;
  const labels={starting:'浏览器准备中',needs_captcha:'需要验证码',connected:'会话有效 · 自动保活中',submitting:'本次登录处理中，请勿重复点击',locked:'已锁定：不会自动重试',error:'浏览器需要检查'};
- $('#session-status').textContent=(s.online?(labels[s.phase]||'等待服务器'):'服务器浏览器未连接')+' · '+(s.reason||'')+' · 累计提交 '+(s.attempts||0)+' 次';
- const ready=s.online&&s.phase==='needs_captcha'&&!s.locked&&!s.pending&&!!s.captcha_png;
- $('#session-login-form').hidden=!ready;$('#session-prepare').disabled=!s.online||!!s.pending||!!s.locked;
+ $('#session-status').textContent=(s.online?(s.manual_only&&s.phase!=='connected'?'手动会话 · 等待只读核验':labels[s.phase]||'等待服务器'):'服务器浏览器未连接')+' · '+(s.reason||'')+' · 累计提交 '+(s.attempts||0)+' 次';
+ const ready=!s.manual_only&&s.online&&s.phase==='needs_captcha'&&!s.locked&&!s.pending&&!!s.captcha_png;
+ $('#session-login-form').hidden=!ready;$('#session-prepare').hidden=!!s.manual_only;$('#session-prepare').disabled=!s.online||!!s.pending||!!s.locked;
+ $('#session-check').disabled=!s.online||!!s.pending;$('#session-manual-note').hidden=!s.manual_only;
  if(previous?.challenge!==s.challenge){$('#session-code').value='';$('#session-captcha').src=s.captcha_png?'data:image/png;base64,'+s.captcha_png:'';}
 }
 $('#session-prepare').onclick=()=>action($('#session-prepare'),async()=>{await api('/api/v1/session/command',{method:'POST',body:JSON.stringify({action:'prepare'})});await loadServerSession();toast('已请求上海浏览器刷新验证码，没有提交登录');});
+$('#session-check').onclick=()=>action($('#session-check'),async()=>{await api('/api/v1/session/command',{method:'POST',body:JSON.stringify({action:'check'})});await loadServerSession();toast('已请求上海服务器仅检查会话；不会提交登录或下单');});
 $('#session-login-form').onsubmit=e=>{e.preventDefault();action(e.submitter,async()=>{if(!serverSession||!e.target.reportValidity())return;await api('/api/v1/session/command',{method:'POST',body:JSON.stringify({action:'submit',challenge:serverSession.challenge,code:$('#session-code').value})});$('#session-code').value='';await loadServerSession();toast('仅提交一次；失败或不明确将锁定，不自动重试');});};
 setInterval(()=>{if(!$('#app').hidden&&activePage==='staking')loadServerSession().catch(()=>{});},5000);
