@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261111-729-controls2"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261111-729-controls2" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261111-session"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261111-session" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -119,6 +119,7 @@
 <div class="autobet-actions"><button id="autobet-copy" class="secondary" type="button">复制脚本</button></div>
 </div>
 </div>
+<article class="panel" id="server-session-panel"><div class="panel-heading"><div><h2>服务器登录与会话</h2><p>登录浏览器在上海服务器运行。有效会话自动保活、同步Cookie；失效后仅等待验证码，不自动反复登录。</p></div><button id="session-prepare" type="button" class="secondary">准备 / 刷新验证码</button></div><div class="session-body"><p id="session-status" role="status">正在连接服务器浏览器…</p><p class="field-note">每次只提交一次。失败或结果不明即锁定，服务重启也不自动重试。此功能不会下单，也不会开启执行。</p><form id="session-login-form" hidden><label>上海浏览器当前验证码<img id="session-captcha" alt="当前登录验证码" width="140" height="55"></label><label>填写图中4位数字<input id="session-code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required></label><button id="session-submit" class="primary" type="submit">仅尝试登录一次</button></form></div></article>
 <article class="panel site-panel"><div class="panel-heading"><div><h2>投注站账户 · 注单与盈亏</h2><p>由执行器每 60 秒只读同步一次；这里不产生任何投注。</p></div><span id="site-sync-at" class="muted"></span></div>
 <div class="site-kpis">
   <div><small>账户</small><b id="site-account">—</b></div>
@@ -133,6 +134,6 @@
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>下单笔数</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>
-<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.6.1 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
+<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.7 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
 </main></div></div><div id="toast" role="status" hidden></div>
 </body></html>
