@@ -203,6 +203,7 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
 });
 async function runBet(mode, dry, btn){
+  if(!dry&&$('#autobet-dry').checked){toast('模拟保护开启：请先关闭模拟并保存，再手动开始真实运行',true);return;}
   const actionVersion=++executionActionVersion;
   const current=()=>{if(actionVersion!==executionActionVersion)throw Error('该开始操作已取消，请重新点击');};
   await action(btn, async()=>{
@@ -232,8 +233,7 @@ async function runBet(mode, dry, btn){
   });
 }
 async function realConfirmBody(){
-  const {settings:s}=await api('/api/settings');
-  return {autobet_confirm_real:true, autobet_dry_run:false};
+  return {autobet_confirm_real:true};
 }
 $('#sim-once').onclick=()=>runBet('single', true, $('#sim-once'));
 $('#sim-cont').onclick=()=>runBet('continuous', true, $('#sim-cont'));
