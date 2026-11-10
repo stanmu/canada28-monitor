@@ -5,7 +5,7 @@ let sessionToken='',simulationCsv='';
 let csrf='', statusData=null, activePage='overview', reportData=[], currentNumbers=[], currentVariant='4', currentRows=[];
 const PERIOD_PAGE_SIZE=60;
 let periodsGeneration=0,periodsBusy=false,periodsHasMore=true,periodsKey='',overviewGeneration=0;
-let numbersGeneration=0,executionActionVersion=0;
+let numbersGeneration=0,reportsGeneration=0,executionActionVersion=0;
 const stakeOptions=[['480',480,'4','480组 · 有兄弟'],['516',516,'5','516组 · 有兄弟（含1/9）'],['720',720,'720','720组 · 无对子'],['729_gap',729,'729_gap','729组 · 隔行（上上期）'],['729_adj',729,'729_adj','729组 · 相邻（上一期）']];
 const stakeChoice=value=>stakeOptions.find(x=>x[0]===String(value))||stakeOptions[0];
 const selectionLabel=variant=>stakeOptions.find(x=>x[2]===variant)?.[3]||variant;
@@ -70,7 +70,7 @@ async function loadOverview({refreshRows=false}={}){
  renderStatus(s);renderCards(r);drawChart(a,b);
  if(refreshRows||!periodsKey)await loadPeriods();else if(periodsKey===periodSelectionKey())indicateNewPeriods(s);
 }
-async function loadReports(){const start=$('#report-start').value,end=$('#report-end').value;if(!start||!end)return;reportData=await api(`/api/reports?start=${start}&end=${end}`);renderReports();$('#daily-export').href=`/api/export/daily.csv?start=${start}&end=${end}`;$('#png-export').href='/api/report.png?day='+end}
+async function loadReports(){const start=$('#report-start').value,end=$('#report-end').value,generation=++reportsGeneration;if(!start||!end)return;const data=await api(`/api/reports?start=${start}&end=${end}`);if(generation!==reportsGeneration||start!==$('#report-start').value||end!==$('#report-end').value)return;reportData=data;renderReports();$('#daily-export').href=`/api/export/daily.csv?start=${start}&end=${end}`;$('#png-export').href='/api/report.png?day='+end}
 function renderReports(){const key=$('#report-case').value,stats=reportData.map(r=>r.cases[key]);let hits=0,n=0,max=0;for(const s of stats){hits+=s.hits;n+=s.periods;max=Math.max(max,s.cross_max_loss)}const totals=[['实际期数',fmt(n)],['✅ 命中 / ❌ 未中',fmt(hits)+' / '+fmt(n-hits)],['所选范围命中率',rate(n?hits/n:null)],['跨日最长未中',max+' 次']];$('#report-totals').innerHTML=totals.map(([a,b])=>`<div class="total"><small>${a}</small><b>${b}</b></div>`).join('');let longest=Math.max(8,...stats.map(s=>s.daily_max_loss));const lengths=Array.from({length:longest-1},(_,i)=>longest-i);$('#report-head').innerHTML='<tr>'+['日期','期数','✅','❌','命中率','当日最长错','跨日最长错',...lengths.map(i=>'连'+i+'错')].map(s=>'<th>'+s+'</th>').join('')+'</tr>';$('#report-rows').innerHTML=reportData.map(r=>{const s=r.cases[key];return `<tr><td>${r.date}${r.complete?'':'<span class="incomplete">未完整</span>'}</td>${[s.periods,s.hits,s.misses,rate(s.hit_rate),s.daily_max_loss,s.cross_max_loss,...lengths.map(i=>s.loss_runs[i]||0)].map(v=>'<td>'+v+'</td>').join('')}</tr>`}).join('')||'<tr><td class="empty">尚无统计</td></tr>'}
 async function loadNumbers(v){currentVariant=v;const generation=++numbersGeneration;$('#number-search').value='';const data=await api('/api/numbers/'+v);if(generation!==numbersGeneration)return;currentNumbers=data.numbers;$$('[data-variant]').forEach(b=>b.classList.toggle('active',b.dataset.variant===v));$('#numbers-title').textContent=(v==='720'?'无对子':'号码'+v)+' · '+data.count+'组';$('#number-export').href='/api/export/numbers/'+v;renderNumbers()}
 function renderNumbers(){const search=$('#number-search').value,rows=currentNumbers.filter(n=>n.includes(search));$('#number-grid').innerHTML=rows.map(n=>'<span>'+n+'</span>').join('');$('#number-count').textContent=`显示 ${rows.length} / ${currentNumbers.length} 组`}
@@ -517,7 +517,7 @@ let serverSession=null;
 async function loadServerSession(){
  const s=await api('/api/v1/session/status'),previous=serverSession;serverSession=s;
  const labels={starting:'浏览器准备中',needs_captcha:'需要验证码',connected:'会话有效 · 自动保活中',submitting:'本次登录处理中，请勿重复点击',locked:'已锁定：不会自动重试',error:'浏览器需要检查'};
- $('#session-status').textContent=(s.online?(s.manual_only&&s.phase!=='connected'?'手动会话 · 等待只读核验':labels[s.phase]||'等待服务器'):'服务器浏览器未连接')+' · '+(s.reason||'')+' · 累计提交 '+(s.attempts||0)+' 次';
+ $('#session-status').textContent=(s.online?(s.manual_only&&s.phase!=='connected'?'手动会话 · 等待只读核验':labels[s.phase]||'等待服务器'):'服务器浏览器未连接')+' · '+(s.reason||'')+(s.verified_at?' · 最近通过核验 '+s.verified_at.slice(11,19)+' 北京':'')+' · 累计提交 '+(s.attempts||0)+' 次';
  const ready=!s.manual_only&&s.online&&s.phase==='needs_captcha'&&!s.locked&&!s.pending&&!!s.captcha_png;
  $('#session-login-form').hidden=!ready;$('#session-prepare').hidden=!!s.manual_only;$('#session-prepare').disabled=!s.online||!!s.pending||!!s.locked;
  $('#session-check').disabled=!s.online||!!s.pending;$('#session-manual-note').hidden=!s.manual_only;
