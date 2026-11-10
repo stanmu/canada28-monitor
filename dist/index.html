@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261111-session"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261111-session" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261111-console-v080"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261111-console-v080" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -18,8 +18,35 @@
 <section id="page-reports" class="page" hidden><div class="filter-bar"><label>开始日期<input type="date" id="report-start"></label><label>结束日期<input type="date" id="report-end"></label><button id="load-reports" class="primary">查看统计</button><a id="daily-export" class="secondary" href="#">导出 CSV ↓</a></div><div class="report-totals" id="report-totals"></div><article class="panel"><div class="panel-heading"><div><h2>每日命中与连错</h2><p>每段只按恰好长度计一次；每日换日切段，方案运行状态跨日延续。</p></div><select id="report-case" aria-label="统计方案"><option value="auto4">自动方案4 · 480→720</option><option value="auto5">自动方案5 · 516→720</option><option value="set4">固定号码4 · 480</option><option value="set5">固定号码5 · 516</option><option value="set720">固定无对子 · 720</option></select></div><div class="table-wrap"><table class="report-table"><thead id="report-head"></thead><tbody id="report-rows"></tbody></table></div></article><div class="report-actions"><p class="muted">日末尚未结束的连续段按已观察长度计入；当日补齐后统计会更新。</p><a id="png-export" class="secondary" href="#" target="_blank">查看当日统计图片 ↗</a><button id="send-report" class="secondary">将所选末日推送飞书</button></div></section>
 <section id="page-numbers" class="page" hidden><div class="generator-choices"><button data-variant="4" class="generator-choice active"><span>04 / BROTHERS</span><b>号码4</b><strong>480 <small>组</small></strong><p>任意两位相差1，包含0 / 9。</p></button><button data-variant="5" class="generator-choice"><span>05 / EXTENDED</span><b>号码5</b><strong>516 <small>组</small></strong><p>号码4的全部组合，再包含1 / 9。</p></button><button data-variant="720" class="generator-choice"><span>ND / DISTINCT</span><b>无对子</b><strong>720 <small>组</small></strong><p>三个位置的数字互不相同。</p></button></div><article class="panel"><div class="panel-heading"><div><h2 id="numbers-title">号码4 · 480组</h2><p>完整列出000—999中的有序号码，保留前导零。</p></div><div class="controls"><button id="copy-numbers" class="secondary">复制全部</button><a id="number-export" class="primary" href="/api/export/numbers/4">下载 TXT ↓</a></div></div><div class="number-search"><label>查找号码<input id="number-search" type="search" maxlength="3" placeholder="例如 019"></label><span id="number-count" class="muted"></span></div><div id="number-grid" class="number-grid"></div></article><p class="muted">每日飞书会包含这三份完整号码表，以及五套方案的统计。生成号码不会执行投注。</p></section>
 <section id="page-settings" class="page" hidden><div class="settings-grid"><form id="settings-form" class="panel form-panel"><span class="eyebrow">RULES & SCHEDULE</span><h2>提醒规则</h2><label class="switch-row"><span><b>连续未中提醒</b><small>实时推送到飞书与Bark</small></span><input id="alarm-enabled" type="checkbox"></label><fieldset><legend>监测哪套自动方案</legend><div class="check-options"><label><input type="checkbox" name="alarm-case" value="auto4">方案4 · 480组</label><label><input type="checkbox" name="alarm-case" value="auto5">方案5 · 516组</label></div></fieldset><label>连续未中次数<input type="number" id="alarm-threshold" min="1" max="50" required></label><p class="field-note">统计切换后方案的整体结果。同段达到阈值时提醒一次，连续第7、8次不重复发。</p><label class="switch-row"><span><b>每日飞书报告</b><small>前一天统计 + 480 / 516 / 720完整号码</small></span><input id="daily-enabled" type="checkbox"></label><div class="form-two"><label>每天发送时间 · 北京<input type="time" id="daily-time" required></label><label>Bark最短间隔 · 秒<input type="number" id="bark-cooldown" min="0" max="3600"></label></div><label class="inline-check"><input id="bark-critical" type="checkbox">Bark使用重要提醒等级</label><button type="submit" class="primary">保存提醒设置</button></form><form id="credentials-form" class="panel form-panel"><span class="eyebrow">NOTIFICATION CHANNELS</span><h2>推送连接</h2><p class="field-note">密钥只保存到服务器，保存后不回显。留空表示保留已有配置。</p><label>飞书机器人 Webhook<input type="password" name="feishu_webhook" autocomplete="off" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/…"></label><label>飞书签名密钥 · 可选<input type="password" name="feishu_signing_secret" autocomplete="off" placeholder="开启签名校验时填写"></label><details><summary>飞书图片推送 · 可选应用配置</summary><p class="field-note">未填时仍推送完整文字日报与号码。填写后增加统计图片。</p><label>App ID<input name="feishu_app_id" autocomplete="off"></label><label>App Secret<input type="password" name="feishu_app_secret" autocomplete="off"></label></details><label>Bark设备地址 · 每行一台<textarea name="bark_urls" rows="3" placeholder="https://api.day.app/设备密钥" autocomplete="off"></textarea></label><div id="credentials-status" class="credential-chips"></div><details><summary>清除已保存配置</summary><div class="check-options vertical"><label><input name="clear" type="checkbox" value="feishu_webhook">清除飞书Webhook</label><label><input name="clear" type="checkbox" value="feishu_signing_secret">清除签名密钥</label><label><input name="clear" type="checkbox" value="bark_urls">清除全部Bark地址</label><label><input name="clear" type="checkbox" value="feishu_app_secret">清除图片应用密钥</label></div></details><button type="submit" class="primary">保存连接配置</button><div class="test-actions"><button type="button" data-test="feishu" class="secondary">发送飞书测试</button><button type="button" data-test="bark" class="secondary">发送Bark测试</button></div></form></div><article class="panel"><div class="panel-heading"><div><h2>发送记录</h2><p>“已入队”与“已发送”分开记录。网络结果不明的消息不自动重发。</p></div><button id="reload-deliveries" class="text-button">刷新记录 ↻</button></div><div class="table-wrap"><table><thead><tr><th>时间</th><th>通道</th><th>内容</th><th>状态</th><th>说明</th></tr></thead><tbody id="delivery-rows"></tbody></table></div></article></section>
-<section id="page-staking" class="page" hidden><article class="panel stake-panel"><span class="badge neutral">自定义金额计划</span><h2>自由搭配每一把</h2><p>每把可独立选择 480 / 516 / 720 / 隔行729 / 相邻729。隔行参考上上期，相邻参考上一期，三个位各排除一个数字。<b>每组金额</b>＝这一把里每个号码下多少钱（本把合计＝组数×单价）；<b>倍数</b>＝相对第 1 把金额的倍数，改倍数会自动算好金额。</p><div class="stake-contract"><span>最小每组金额 <b>0.1</b></span><span>金额步长 <b>0.1</b></span><span>执行状态 <b id="stake-exec-state">未启用</b></span></div><form id="stake-form"><div id="stake-rows"></div><fieldset class="simulation-rule"><legend>金额切换（自由配置）</legend>
-<label class="inline-check"><input id="switch-enabled" type="checkbox" checked>启用「连续❌→高金额」切换</label>
+<section id="page-staking" class="page" hidden><article class="panel execution-console" id="execution-console">
+<div class="panel-heading"><div><h2>本期执行计划</h2><p>先选择执行方案，再选择单期或连续运行。所有方案共用模拟、站点执行和停止按钮。</p></div><span id="autobet-badge" class="badge neutral">加载中</span></div>
+<div class="execution-console-body">
+<div class="execution-selectors"><label>执行方案<select id="execution-strategy"><option value="plan">普通计划 · 按各把金额</option><option value="high">高金额切换 · 连错后切换金额</option><option value="special">特殊规则 · 等命中后打特殊把</option></select></label><label>启动方式<select id="execution-mode"><option value="single">单期 · 完成本期后自动停止</option><option value="continuous">连续 · 每期按所选方案运行</option></select></label></div>
+<p id="execution-strategy-description" class="field-note" role="status">正在读取当前执行方案…</p>
+<p id="execution-readiness" class="execution-readiness" role="status"></p><div class="unified-run-actions"><button id="start-sim" type="button" class="primary" disabled>开始模拟</button><button id="start-site" type="button" class="danger" disabled>开始站点执行</button><button id="ab-stop" type="button" class="danger">■ 停止并关闸</button></div>
+<div id="autobet-statusbar" class="autobet-statusbar">
+  <div class="ab-state"><span id="ab-dot" class="ab-dot"></span><div><b id="ab-state-text">加载中</b><small id="ab-state-sub">正在读取运行状态</small></div></div>
+  <div class="ab-kpis">
+    <div><small>本次计划</small><b id="ab-kpi-plan">—</b></div>
+    <div><small>本期金额</small><b id="ab-kpi-amount">—</b></div>
+    <div><small>已下注</small><b id="ab-kpi-placed">—</b></div>
+    <div><small>累计投入</small><b id="ab-kpi-spent">—</b></div>
+    <div><small>金额来源</small><b id="ab-kpi-left">按计划</b><small id="ab-cap-hint" class="hint"></small></div>
+  </div>
+  <div class="ab-gate"><span id="ab-gate-chip" class="chip">闸门：—</span><button id="ab-gate-toggle" class="secondary" type="button">关闭闸门</button></div>
+</div>
+
+<div id="autobet-plan" class="autobet-plan"></div>
+
+<p class="field-note">开始模拟只在统计站记录，不向游戏站提交订单；开始站点执行会提交所选方案并改变游戏积分。停止适用于全部方案。切换方案会先停止；存在未完成订单时须先核对，再重置把次。</p>
+<details class="execution-protection"><summary>执行保护与连接参数</summary>
+<label class="inline-check"><input id="autobet-dry" type="checkbox" checked>模拟保护（开启时禁止站点执行）</label>
+<div class="form-two"><label>距停盘少于多少秒跳过本期<input id="autobet-lead" type="number" min="10" max="600" value="90"></label><label>单期金额上限 · 站点单位<input id="autobet-maxsingle" type="number" min="0" step="0.1" value="20000"></label></div>
+<label class="inline-check"><input id="confirm-real" type="checkbox">我确认本次将提交到游戏站并改变积分（本期 <b id="real-amount">—</b>）</label>
+<div class="autobet-actions"><button id="autobet-save2" type="button" class="secondary">保存执行保护设置</button><button id="autobet-reset" type="button" class="secondary">重置到首把</button></div>
+<p class="field-note">站点执行仍须关闭并保存模拟保护、手动开启闸门、勾选确认。已被游戏站接受的批次无法撤回，停止会阻断后续批次。</p>
+</details></div></article><article class="panel stake-panel"><span class="badge neutral">自定义金额计划</span><h2>自由搭配每一把</h2><p>每把可独立选择 480 / 516 / 720 / 隔行729 / 相邻729。隔行参考上上期，相邻参考上一期，三个位各排除一个数字。<b>每组金额</b>＝这一把里每个号码下多少钱（本把合计＝组数×单价）；<b>倍数</b>＝相对第 1 把金额的倍数，改倍数会自动算好金额。</p><div class="stake-contract"><span>最小每组金额 <b>0.1</b></span><span>金额步长 <b>0.1</b></span><span>执行状态 <b id="stake-exec-state">未启用</b></span></div><form id="stake-form"><div id="stake-rows"></div><fieldset class="simulation-rule"><legend>金额切换（自由配置）</legend>
+<label class="inline-check"><input id="switch-enabled" type="checkbox" disabled>当前执行方案为高金额切换（在上方统一选择）</label>
 <div class="rule-grid">
   <label><span>连续 ❌ 多少把进入高金额</span><input id="switch-loss" type="number" min="1" max="1000" value="5" required></label>
   <label><span>高金额（每组多少钱）</span><input id="switch-amount" type="number" min="0.1" max="1000000" step="0.1" value="10" required></label>
@@ -32,8 +59,8 @@
   <li>高金额阶段只累计 <b>480 / 516 组的兄弟命中</b>，<b>720 无对子命中不算</b>；累计达标后下一把恢复正常金额。</li>
   <li>正常阶段任意一把命中即回到第 1 把；末把未中则循环回第 1 把。</li>
 </ul>
-</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划草稿</button></form><div class="special-run"><label><input id="sp-enabled" type="checkbox"> 启用特殊规则（关闭后使用普通计划）</label><h2>特殊把与当天翻倍</h2>
-<p class="field-note">连续 ❌ 达到门槛后先按正常金额等待一次命中；<b>命中后的下一把</b>才打特殊把，特殊把中或不中都重置回第 1 把、正常金额。保存后该规则会用于真实下单（受“模拟模式”开关保护）。</p>
+</fieldset><button type="button" id="add-stake" class="secondary">＋ 增加把次</button><button class="primary" type="submit">保存计划参数（不启动）</button></form><div class="special-run"><label><input id="sp-enabled" type="checkbox" disabled>当前执行方案为特殊规则（在上方统一选择）</label><h2>特殊把与当天翻倍</h2>
+<p class="field-note">连续 ❌ 达到门槛后先按正常金额等待一次命中；<b>命中后的下一把</b>才打特殊把，特殊把中或不中都重置回第 1 把、正常金额。保存仅更新参数并停止执行，不会选择或启动方案；请在上方“本期执行计划”选择特殊规则后统一开始。</p>
 <div class="rule-grid">
   <label class="cfg"><span>连续 ❌ 多少把后进入等待</span><input id="sp-loss" type="number" min="1" max="100" value="5"><small>连错达到这个数后，继续按正常金额打，等一次命中</small></label>
   <label class="cfg"><span>特殊把号码（三选一）</span><select id="sp-mode"><option value="720">720 无对子</option><option value="729_gap">729 隔一行（参考上上期）</option><option value="729_adj">729 不隔行（参考上一期）</option></select><small>命中后那一把要打的号码集合</small></label>
@@ -48,31 +75,19 @@
 <div class="filter-bar">
   <label>开始日期<input id="sp-start" type="date"></label>
   <label>结束日期<input id="sp-end" type="date"></label>
-  <button id="sp-save" type="button" class="secondary">保存特殊规则（用于真实下单）</button>
-  <button id="sp-run" type="button" class="primary">运行特殊规则模拟</button>
+  <button id="sp-save" type="button" class="secondary">保存特殊参数（不启动）</button>
+  <button id="sp-run" type="button" class="primary">特殊历史回测（不启动）</button>
   <button id="sp-csv" type="button" class="secondary" hidden>下载明细 CSV</button>
 </div>
 <p id="sp-note" class="field-note"></p><div id="sp-summary" class="report-totals"></div>
 <div class="table-wrap"><table><thead><tr><th>日期</th><th>期数</th><th>命中</th><th>特殊把</th><th>特殊命中</th><th>是否翻倍</th><th>投入</th><th>返还</th><th>净值</th></tr></thead><tbody id="sp-daily"></tbody></table></div>
 <div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>类型</th><th>组数</th><th>每组金额</th><th>倍数</th><th>投入</th><th>返还</th></tr></thead><tbody id="sp-rows"></tbody></table></div>
 <p class="field-note">以上为历史模拟，不产生任何真实注单。</p></div>
-<div class="simulation-run"><h2>历史模拟回测</h2><p class="field-note">按把次由小到大循环，任一期命中后回到首把。区间首期从正常金额、首把开始，跨日不重置。使用当前表单配置，仅模拟，不保存或执行订单。</p><div class="filter-bar"><label>开始日期<input id="simulation-start" type="date" required></label><label>结束日期<input id="simulation-end" type="date" required></label><button id="run-simulation" type="button" class="primary">运行模拟</button><button id="download-simulation" type="button" class="secondary" hidden>下载完整明细 CSV</button></div><div id="simulation-summary" class="report-totals"></div><div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>本期阶段 / 把次</th><th>组数 / 每组金额</th><th>高金额兄弟累计✅</th><th>下期阶段 / 把次</th><th>模拟净值 / 累计</th><th>切换说明</th></tr></thead><tbody id="simulation-rows"></tbody></table></div><p id="simulation-note" class="field-note"></p></div><p class="field-note">例如第1把480组、每组0.1，合计48；第2把720组、每组0.2，合计144。保存计划会停止当前执行，不改变日常统计；自动投注只在“自动投注”页启用后才执行。</p><article class="panel autobet-panel"><div class="panel-heading"><div><h2>自动投注 · 本机执行</h2><p>云端只保存计划与注单台账；真实下单在你本机的执行器完成，投注站密码不经过服务器。</p></div><span id="autobet-badge" class="badge neutral">未连接</span></div>
+<div class="simulation-run"><h2>历史模拟回测</h2><p class="field-note">按把次由小到大循环，任一期命中后回到首把。区间首期从正常金额、首把开始，跨日不重置。使用当前表单配置，仅模拟，不保存或执行订单。</p><div class="filter-bar"><label>开始日期<input id="simulation-start" type="date" required></label><label>结束日期<input id="simulation-end" type="date" required></label><button id="run-simulation" type="button" class="primary">普通或高金额历史回测</button><button id="download-simulation" type="button" class="secondary" hidden>下载完整明细 CSV</button></div><div id="simulation-summary" class="report-totals"></div><div class="table-wrap"><table><thead><tr><th>期号 / 时间</th><th>号码 / 结果</th><th>本期阶段 / 把次</th><th>组数 / 每组金额</th><th>高金额兄弟累计✅</th><th>下期阶段 / 把次</th><th>模拟净值 / 累计</th><th>切换说明</th></tr></thead><tbody id="simulation-rows"></tbody></table></div><p id="simulation-note" class="field-note"></p></div><p class="field-note">例如第1把480组、每组0.1，合计48；第2把720组、每组0.2，合计144。保存计划参数会停止当前执行并保留所选执行方案。启动和停止请统一使用上方“本期执行计划”。</p><article class="panel autobet-panel"><div class="panel-heading"><div><h2>连接与执行记录</h2><p>上海服务器执行所选方案；这里维护连接。保存参数和检查会话不会启动运行。</p></div></div>
 <div class="control-legend"><b>三层控制</b>
   <span>① 闸门：总断电，关闭后任何下单请求被拒绝</span>
   <span>② 开关：开始/停止决定执行器是否工作</span>
   <span>③ 模拟模式：勾选后只走流程不真实提交</span></div>
-<div id="autobet-statusbar" class="autobet-statusbar">
-  <div class="ab-state"><span id="ab-dot" class="ab-dot"></span><div><b id="ab-state-text">加载中</b><small id="ab-state-sub">正在读取运行状态</small></div></div>
-  <div class="ab-kpis">
-    <div><small>本次计划</small><b id="ab-kpi-plan">—</b></div>
-    <div><small>本期金额</small><b id="ab-kpi-amount">—</b></div>
-    <div><small>已下注</small><b id="ab-kpi-placed">—</b></div>
-    <div><small>累计投入</small><b id="ab-kpi-spent">—</b></div>
-    <div><small>金额来源</small><b id="ab-kpi-left">按计划</b><small id="ab-cap-hint" class="hint"></small></div>
-  </div>
-  <div class="ab-gate"><span id="ab-gate-chip" class="chip">闸门：—</span><button id="ab-gate-toggle" class="secondary" type="button">关闭闸门</button></div>
-  <button id="ab-stop" class="danger" type="button">■ 紧急停止</button>
-</div>
 <div class="autobet-grid">
 <div class="autobet-box"><h3>1 · 连接投注站</h3><p class="field-note">先用下面按钮打开投注站登录页，在浏览器里手动完成验证码登录；登录后运行本机“登录助手”，它会把会话安全写入服务器。</p>
 <a class="primary" href="https://s4.sd3568.xyz/login.html" target="_blank" rel="noreferrer noopener">打开投注站登录页 ↗</a>
@@ -81,43 +96,13 @@
 <label>会话 Cookie<textarea id="autobet-cookie" rows="2" autocomplete="off" placeholder="BMW=…（由登录助手自动写入，一般无需手填）"></textarea></label>
 <div class="autobet-actions"><button id="autobet-save" class="secondary" type="button">保存连接设置</button><button id="autobet-check" class="secondary" type="button">检测会话</button></div>
 </div>
-<div class="autobet-box"><h3>2 · 本期执行计划</h3><div id="autobet-plan" class="autobet-plan"></div>
-<label class="inline-check"><input id="autobet-dry" type="checkbox" checked>模拟模式（只走流程、不真实提交）</label>
-<div class="form-two">
-  <label>提前停盘多少秒下单<small class="hint">距停盘小于该秒数就跳过本期</small><input id="autobet-lead" type="number" min="10" max="600" value="90"></label>
-  <label>单期金额上限（元）<small class="hint">本期按计划算出的金额超过它就拒绝下单，不会偷偷少下</small><input id="autobet-maxsingle" type="number" min="0" step="0.1" value="20000"></label>
-</div>
-<div class="run-split">
-  <div class="run-block sim">
-    <h4>模拟运行 · 不花钱</h4>
-    <p class="field-note">模拟会先关闭闸门并撤销旧授权，再按计划回报0注，不会提交真实订单。</p>
-    <div class="run-actions">
-      <button id="sim-once" class="primary" type="button">模拟跑一期</button>
-      <button id="sim-cont" class="secondary" type="button">模拟连续跑</button>
-      <button id="sim-stop" class="secondary" type="button">停止模拟</button>
-    </div>
-  </div>
-  <div class="run-block real">
-    <h4>真实运行 · 花真钱</h4>
-    <p class="field-note">必须闸门已开启 + 勾选下方确认，才会真实提交。</p>
-    <label class="inline-check"><input id="confirm-real" type="checkbox">我知道这会花真钱（本期 <b id="real-amount">—</b>）</label>
-    <div class="run-actions">
-      <button id="real-once" class="danger" type="button">真实跑一期</button>
-      <button id="real-cont" class="danger" type="button">真实连续跑</button>
-      <button id="real-stop" class="secondary" type="button">停止真实</button>
-    </div>
-  </div>
-</div>
-<div class="autobet-actions"><button id="autobet-save2" class="secondary" type="button">保存执行设置</button><button id="autobet-reset" class="secondary" type="button">重置到第 1 把</button></div>
-<p class="field-note">任一停止入口都会关闭闸门、撤销旧授权。已发送或第三方已接受的批次无法撤回，后续批次将停止。</p>
-</div>
-<div class="autobet-box autobet-universal"><h3>3 · 手机 / 任意设备下单脚本</h3>
+<details class="autobet-box autobet-universal"><summary>备用手机执行脚本 · 上海执行器运行时无需使用</summary>
 <p class="field-note">不依赖这台电脑。在<b>已登录投注站的同一浏览器</b>里执行一次脚本，它会在站点页面内按本期计划逐号下单并回报台账。</p>
 <button id="autobet-make" class="secondary" type="button">生成下单脚本</button>
 <p class="field-note" id="autobet-make-hint">iPhone：Safari 收藏一个书签，把地址改成这段 javascript；安卓/电脑：地址栏粘贴后回车。</p>
 <textarea id="autobet-script" rows="4" readonly placeholder="点上面按钮生成"></textarea>
 <div class="autobet-actions"><button id="autobet-copy" class="secondary" type="button">复制脚本</button></div>
-</div>
+</details>
 </div>
 <article class="panel" id="server-session-panel"><div class="panel-heading"><div><h2>服务器登录与会话</h2><p>登录浏览器在上海服务器运行。有效会话自动保活、同步Cookie；支持手动提供会话，失效后不自动反复登录。</p></div><div class="test-actions"><button id="session-check" type="button" class="secondary">仅检查会话</button><button id="session-prepare" type="button" class="secondary">准备 / 刷新验证码</button></div></div><div class="session-body"><p id="session-status" role="status">正在连接服务器浏览器…</p><p id="session-manual-note" class="field-note" hidden>当前采用手动会话模式：在上方连接设置粘贴你已手动登录的Cookie，保存后点“仅检查会话”。服务器只读验证身份并保活，不代填或提交账号密码。Cookie不要发到聊天里。</p><p class="field-note">每次只提交一次。失败或结果不明即锁定，服务重启也不自动重试。此功能不会下单，也不会开启执行。</p><form id="session-login-form" hidden><label>上海浏览器当前验证码<img id="session-captcha" alt="当前登录验证码" width="140" height="55"></label><label>填写图中4位数字<input id="session-code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required></label><button id="session-submit" class="primary" type="submit">仅尝试登录一次</button></form></div></article>
 <article class="panel site-panel"><div class="panel-heading"><div><h2>投注站账户 · 注单与盈亏</h2><p>由执行器每 60 秒只读同步一次；这里不产生任何投注。</p></div><span id="site-sync-at" class="muted"></span></div>
