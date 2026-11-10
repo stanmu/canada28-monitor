@@ -5,7 +5,10 @@ let sessionToken='',simulationCsv='';
 let csrf='', statusData=null, activePage='overview', reportData=[], currentNumbers=[], currentVariant='4', currentRows=[];
 const PERIOD_PAGE_SIZE=60;
 let periodsGeneration=0,periodsBusy=false,periodsHasMore=true,periodsKey='',overviewGeneration=0;
-let numbersGeneration=0;
+let numbersGeneration=0,executionActionVersion=0;
+const stakeOptions=[['480',480,'4','480组 · 有兄弟'],['516',516,'5','516组 · 有兄弟（含1/9）'],['720',720,'720','720组 · 无对子'],['729_gap',729,'729_gap','729组 · 隔行（上上期）'],['729_adj',729,'729_adj','729组 · 相邻（上一期）']];
+const stakeChoice=value=>stakeOptions.find(x=>x[0]===String(value))||stakeOptions[0];
+const selectionLabel=variant=>stakeOptions.find(x=>x[2]===variant)?.[3]||variant;
 const pages={overview:['运行总览','LIVE OVERVIEW','看清每一次变化','两套方案独立运行，开奖后按规则自动切换。'],reports:['每日回测','DAILY REPORTS','用数据还原每一天','五套统计分别展示，连续未中按恰好段长计数。'],numbers:['号码生成','NUMBER GENERATOR','生成一份清楚的号码表','选择方案，复制或下载全部有序三位号码。'],settings:['提醒设置','NOTIFICATIONS','让提醒按你的规则到达','每日飞书报告，实时飞书与Bark连续未中提醒。'],staking:['自动投注','PLAN & EXECUTION','把计划接到真实下单','云端出计划与台账，本机执行器完成登录后的逐号下单。']};
 const fmt=n=>n==null?'—':Number(n).toLocaleString('zh-CN');
 const rate=n=>n==null?'—':(n*100).toFixed(2)+'%';
@@ -79,20 +82,21 @@ function stakeBase(){
   const a=first?Number(first.querySelector('[name=amount]').value):0;
   return Number.isFinite(a)&&a>0?a:0.1;
 }
-function addStake(round='',amount='0.1',groups=480){
+function addStake(round='',amount='0.1',groups=480,variant=null){
+ const selected=groups===729?variant:String(groups);
  const div=document.createElement('div');div.className='stake-row';
  const base=stakeBase();
  const multiple=(Number(amount)/base)||1;
- div.innerHTML=`<label>第几把<input name="round" type="number" min="1" max="100" value="${esc(round)}" required></label><label>号码组合<select name="group_count">${[[480,'480组 · 有兄弟'],[516,'516组 · 有兄弟（含1/9）'],[720,'720组 · 无对子']].map(([n,label])=>`<option value="${n}"${n===Number(groups)?' selected':''}>${label}</option>`).join('')}</select></label><label class="amount-cell">每组金额<input name="amount" type="number" min="0.1" max="1000000" step="0.1" value="${esc(amount)}" required><small>这一把每个号码下多少</small></label><label class="mult-cell">倍数<input name="multiple" type="number" min="0.1" step="0.1" value="${Number(multiple.toFixed(2))}"><small>= 第1把金额 × 倍数</small></label><div class="stake-subtotal"><span>本把合计</span><output></output></div><button type="button" class="remove" aria-label="移除此把">移除</button>`;
+ div.innerHTML=`<label>第几把<input name="round" type="number" min="1" max="100" value="${esc(round)}" required></label><label>号码组合<select name="group_count">${stakeOptions.map(([value,n,v,label])=>`<option value="${value}"${value===selected?' selected':''}>${label}</option>`).join('')}</select></label><label class="amount-cell">每组金额<input name="amount" type="number" min="0.1" max="1000000" step="0.1" value="${esc(amount)}" required><small>这一把每个号码下多少</small></label><label class="mult-cell">倍数<input name="multiple" type="number" min="0.1" step="0.1" value="${Number(multiple.toFixed(2))}"><small>= 第1把金额 × 倍数</small></label><div class="stake-subtotal"><span>本把合计</span><output></output></div><button type="button" class="remove" aria-label="移除此把">移除</button>`;
  const amountEl=div.querySelector('[name=amount]'), multEl=div.querySelector('[name=multiple]');
- const update=()=>{const n=Number(div.querySelector('[name=group_count]').value),a=Number(amountEl.value);div.querySelector('output').textContent=a>=0.1&&Number.isFinite(a)?(n*a).toFixed(1):'—'};
+ const update=()=>{const n=stakeChoice(div.querySelector('[name=group_count]').value)[1],a=Number(amountEl.value);div.querySelector('output').textContent=a>=0.1&&Number.isFinite(a)?(n*a).toFixed(1):'—'};
  multEl.oninput=()=>{const m=Number(multEl.value);if(m>0){amountEl.value=(stakeBase()*m).toFixed(2);update();invalidateSimulation()}};
  amountEl.oninput=()=>{const a=Number(amountEl.value),b=stakeBase();if(b>0&&a>0)multEl.value=Number((a/b).toFixed(2));update()};
  div.onchange=update;div.querySelector('button').onclick=()=>{div.remove();invalidateSimulation()};$('#stake-rows').append(div);update();
 }
-async function loadStake(){const s=await api('/api/v1/staking/schema');$('#stake-rows').innerHTML='';(s.rows.length?s.rows:[{round:1,group_count:480,amount:'0.1'}]).forEach(r=>addStake(r.round,r.amount,r.group_count));const rule=s.switch_rule||{enabled:true,loss_trigger:5,high_amount:'10',brother_hit_target:5};$('#switch-enabled').checked=rule.enabled;$('#switch-loss').value=rule.loss_trigger;$('#switch-amount').value=rule.high_amount;$('#switch-target').value=rule.brother_hit_target;renderSwitchRule();renderSwitchLive();await loadSpecial();if(!$('#simulation-end').value){const end=new Date(dayNow()+'T12:00:00+08:00');end.setDate(end.getDate()-1);$('#simulation-end').value=end.toISOString().slice(0,10);end.setDate(end.getDate()-6);$('#simulation-start').value=end.toISOString().slice(0,10)}}
-function stakePayload(){return {rows:$$('.stake-row').map(x=>({round:Number(x.querySelector('[name=round]').value),group_count:Number(x.querySelector('[name=group_count]').value),amount:x.querySelector('[name=amount]').value})),switch_rule:{enabled:$('#switch-enabled').checked,loss_trigger:Number($('#switch-loss').value),high_amount:$('#switch-amount').value,brother_hit_target:Number($('#switch-target').value)}}}
-function renderSimulation(r){simulationCsv=r.csv;$('#download-simulation').hidden=false;const s=r.summary;$('#simulation-summary').innerHTML=[['实际模拟期数',fmt(s.periods)],['兄弟✅ / 无对子✅',fmt(s.brother_hits)+' / '+fmt(s.no_double_hits)],['高金额阶段兄弟✅',fmt(s.high_brother_hits)],['进入 / 完成高金额轮次',s.high_entries+' / '+s.high_exits],['最长连续未中',s.max_loss+'期'],['累计模拟净值',fmt(s.net)]].map(([a,b])=>`<div class="total"><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join('');$('#simulation-rows').innerHTML=r.rows.map(x=>`<tr><td>${x.issue}<small>${esc(x.time.replace('T',' '))}</small></td><td>${esc(x.code)} ${x.hit?'✅':'❌'}</td><td>${x.phase} / 第${x.round}把</td><td>${x.group_count} / ${esc(x.amount)}</td><td>${x.high_brother_hits}</td><td>${x.next_phase} / 第${x.next_round}把</td><td>${esc(x.net)}<small>${esc(x.balance)}</small></td><td>${esc(x.event||'—')}</td></tr>`).join('');$('#simulation-note').textContent=`显示最后${r.rows.length}期，CSV包含本次全部${s.periods}期。使用区间内已采集数据；期末阶段：${s.ending_phase}，本轮高金额兄弟累计命中${s.ending_high_brother_hits}。`}
+async function loadStake(){const s=await api('/api/v1/staking/schema');$('#stake-rows').innerHTML='';(s.rows.length?s.rows:[{round:1,group_count:480,amount:'0.1'}]).forEach(r=>addStake(r.round,r.amount,r.group_count,r.variant));const rule=s.switch_rule||{enabled:true,loss_trigger:5,high_amount:'10',brother_hit_target:5};$('#switch-enabled').checked=rule.enabled;$('#switch-loss').value=rule.loss_trigger;$('#switch-amount').value=rule.high_amount;$('#switch-target').value=rule.brother_hit_target;renderSwitchRule();renderSwitchLive();await loadSpecial();if(!$('#simulation-end').value){const end=new Date(dayNow()+'T12:00:00+08:00');end.setDate(end.getDate()-1);$('#simulation-end').value=end.toISOString().slice(0,10);end.setDate(end.getDate()-6);$('#simulation-start').value=end.toISOString().slice(0,10)}}
+function stakePayload(){return {rows:$$('.stake-row').map(x=>({round:Number(x.querySelector('[name=round]').value),group_count:stakeChoice(x.querySelector('[name=group_count]').value)[1],variant:stakeChoice(x.querySelector('[name=group_count]').value)[2],amount:x.querySelector('[name=amount]').value})),switch_rule:{enabled:$('#switch-enabled').checked,loss_trigger:Number($('#switch-loss').value),high_amount:$('#switch-amount').value,brother_hit_target:Number($('#switch-target').value)}}}
+function renderSimulation(r){simulationCsv=r.csv;$('#download-simulation').hidden=false;const s=r.summary;$('#simulation-summary').innerHTML=[['实际模拟期数',fmt(s.periods)],['兄弟✅ / 无对子✅',fmt(s.brother_hits)+' / '+fmt(s.no_double_hits)],['729模式✅',fmt(s.position_hits||0)],['高金额阶段兄弟✅',fmt(s.high_brother_hits)],['进入 / 完成高金额轮次',s.high_entries+' / '+s.high_exits],['最长连续未中',s.max_loss+'期'],['累计模拟净值',fmt(s.net)]].map(([a,b])=>`<div class="total"><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join('');$('#simulation-rows').innerHTML=r.rows.map(x=>`<tr><td>${x.issue}<small>${esc(x.time.replace('T',' '))}</small></td><td>${esc(x.code)} ${x.hit?'✅':'❌'}</td><td>${x.phase} / 第${x.round}把</td><td>${esc(selectionLabel(x.variant))} / ${esc(x.amount)}</td><td>${x.high_brother_hits}</td><td>${x.next_phase} / 第${x.next_round}把</td><td>${esc(x.net)}<small>${esc(x.balance)}</small></td><td>${esc(x.event||'—')}</td></tr>`).join('');$('#simulation-note').textContent=`显示最后${r.rows.length}期，CSV包含本次全部${s.periods}期。使用区间内已采集数据；期末阶段：${s.ending_phase}，本轮高金额兄弟累计命中${s.ending_high_brother_hits}。`}
 $('#run-simulation').onclick=()=>action($('#run-simulation'),async()=>{if(!$('#stake-form').reportValidity())return;const start=$('#simulation-start').value,end=$('#simulation-end').value;if(!start||!end){toast('请选择完整的起止日期',true);return}const r=await api('/api/v1/staking/simulate',{method:'POST',body:JSON.stringify({...stakePayload(),start,end})});renderSimulation(r);toast('历史模拟完成')});
 $('#download-simulation').onclick=()=>{const url=URL.createObjectURL(new Blob([simulationCsv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='历史模拟明细.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
@@ -103,7 +107,7 @@ $('#overview-day').onchange=()=>{loadPeriods().catch(e=>toast(e.message,true));l
 $$('[data-variant]').forEach(b=>b.onclick=()=>action(b,()=>loadNumbers(b.dataset.variant)));$('#number-search').oninput=renderNumbers;$('#copy-numbers').onclick=()=>action($('#copy-numbers'),async()=>{await navigator.clipboard.writeText(currentNumbers.join('\n'));toast('已复制 '+currentNumbers.length+'组号码')});
 $('#settings-form').onsubmit=e=>{e.preventDefault();action(e.submitter,async()=>{const s={alarm_enabled:$('#alarm-enabled').checked,alarm_cases:$$('[name="alarm-case"]:checked').map(x=>x.value),alarm_threshold:Number($('#alarm-threshold').value),daily_enabled:$('#daily-enabled').checked,daily_time:$('#daily-time').value,bark_cooldown:Number($('#bark-cooldown').value),bark_critical:$('#bark-critical').checked};await api('/api/settings',{method:'PUT',body:JSON.stringify(s)});toast('提醒设置已保存');renderStatus(await api('/api/status'))})};
 $('#credentials-form').onsubmit=e=>{e.preventDefault();action(e.submitter,async()=>{const f=new FormData(e.target),body={clear:f.getAll('clear')};for(const key of ['feishu_webhook','feishu_signing_secret','feishu_app_id','feishu_app_secret'])if(f.get(key).trim())body[key]=f.get(key).trim();if(f.get('bark_urls').trim())body.bark_urls=f.get('bark_urls').split('\n').map(x=>x.trim()).filter(Boolean);const r=await api('/api/credentials',{method:'PUT',body:JSON.stringify(body)});e.target.reset();renderConfigured(r.configured);toast('连接配置已保存，密钥不回显');renderStatus(await api('/api/status'))})};
-$$('[data-test]').forEach(b=>b.onclick=()=>action(b,async()=>toast((await api('/api/notifications/test/'+b.dataset.test,{method:'POST'})).message)));$('#reload-deliveries').onclick=()=>action($('#reload-deliveries'),loadDeliveries);$('#add-stake').onclick=()=>{invalidateSimulation();const round=Math.max(0,...$$('.stake-row').map(x=>Number(x.querySelector('[name=round]').value)))+1;if(round>100){toast('最多设置到第100把',true);return}addStake(round)};$('#stake-form').onsubmit=e=>{e.preventDefault();action(e.submitter,async()=>{await api('/api/v1/staking/draft',{method:'PUT',body:JSON.stringify(stakePayload())});toast('号码组合与金额草稿已保存，执行未启用')})};
+$$('[data-test]').forEach(b=>b.onclick=()=>action(b,async()=>toast((await api('/api/notifications/test/'+b.dataset.test,{method:'POST'})).message)));$('#reload-deliveries').onclick=()=>action($('#reload-deliveries'),loadDeliveries);$('#add-stake').onclick=()=>{invalidateSimulation();const round=Math.max(0,...$$('.stake-row').map(x=>Number(x.querySelector('[name=round]').value)))+1;if(round>100){toast('最多设置到第100把',true);return}addStake(round)};$('#stake-form').onsubmit=e=>{e.preventDefault();action(e.submitter,async()=>{++executionActionVersion;await api('/api/v1/staking/draft',{method:'PUT',body:JSON.stringify(stakePayload())});await loadAutobet();toast('号码组合与金额已保存，当前执行已停止')})};
 start().catch(e=>{if(!/请先登录/.test(e.message))$('#login-error').textContent=e.message});setInterval(()=>{if(!$('#app').hidden&&activePage==='overview')loadOverview().catch(()=>{});if(!$('#app').hidden&&activePage==='settings')loadDeliveries().catch(()=>{})},15000);
 if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&!$('#app').hidden&&activePage==='overview'&&periodsKey&&periodsHasMore&&!periodsBusy)loadPeriods(true).catch(e=>toast(e.message,true))},{rootMargin:'0px 0px 180px 0px'});observer.observe($('#period-sentinel'))}
 $('#logout-mobile').onclick=()=>action($('#logout-mobile'),async()=>{await api('/api/logout',{method:'POST'});location.reload()});
@@ -141,7 +145,7 @@ function renderAutobetStatus(s){
   $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
   $('#ab-kpi-spent').textContent = s.stake_total? (s.stake_total+' 元') : '0 元';
   $('#ab-kpi-left').textContent = '按计划';
-  $('#ab-stop').disabled = !on;
+  $('#ab-stop').disabled = false;
 }
 function renderAutobet(s){
   autobetData=s;
@@ -161,12 +165,12 @@ function renderAutobet(s){
     ? `<p class="field-note">${esc(n?.blocked||'先在下方保存一份金额计划草稿')}</p>`
     : `<div class="plan-grid">
         <div><small>第几把</small><b>第 ${n.round} 把</b></div>
-        <div><small>号码组合</small><b>${n.group_count} 组</b></div>
+        <div><small>号码组合</small><b>${esc(selectionLabel(n.variant))}</b></div>
         <div><small>每组金额</small><b>${esc(n.amount)}</b></div>
         <div><small>本期合计</small><b>${esc(n.planned_stake)}</b></div>
         <div><small>金额阶段</small><b>${n.phase}</b></div>
         <div><small>连续未中</small><b>${s.state.loss} 次</b></div>
-      </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期计划注数 ${n.count}。上次投注期号：${s.state.last_issue??'—'}。</p>`;
+      </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期计划注数 ${n.count}。上次投注期号：${s.state.last_issue??'—'}。${n.reference_code?'参考第 '+n.reference_issue+' 期 '+esc(n.reference_code)+'，各位置各排除一个数字。':''}</p>`;
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
      <td>${o.placed}</td>
@@ -199,9 +203,11 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   toast(r.cookie?`已保存会话：${r.cookie.slice(0,12)}… · 账号 ${r.account||'未填写'}`:'尚未保存会话');
 });
 async function runBet(mode, dry, btn){
+  const actionVersion=++executionActionVersion;
+  const current=()=>{if(actionVersion!==executionActionVersion)throw Error('该开始操作已取消，请重新点击');};
   await action(btn, async()=>{
     if(executionInputsDirty){await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({}))});executionInputsDirty=false;}
-    const st0=await api('/api/v1/autobet/status');
+    const st0=await api('/api/v1/autobet/status');current();
     if(dry){
       toast('模拟运行：不会开闸门、不会真实下单');
     } else {
@@ -218,7 +224,8 @@ async function runBet(mode, dry, btn){
         : '未配置'))) return;
       await api('/api/settings',{method:'PUT',body:JSON.stringify(await realConfirmBody())});
     }
-    await api('/api/v1/autobet/start',{method:'POST',body:JSON.stringify({mode, dry})});
+    current();
+    await api('/api/v1/autobet/start',{method:'POST',body:JSON.stringify({mode, dry, expected_epoch:st0.control_epoch})});
     await loadAutobet();
     toast(dry?('已开始模拟：'+(mode==='single'?'只跑一期':'连续跑'))
             :('已开始真实下单：'+(mode==='single'?'只跑一期':'连续跑')));
@@ -242,21 +249,23 @@ function buildBetScript(token, csrf, base){
  async function browserExecutor(CFG){
   const H={'Authorization':'Bearer '+CFG.T,'X-CSRF-Token':CFG.C,'Content-Type':'application/json'};
   const instance=window.__p911Instance||(window.__p911Instance='browser-'+crypto.randomUUID());
-  const doneKey='p911ReservedIssue';let busy=false,pending=null;
+  const runId=crypto.randomUUID();window.__p911RunId=runId;
+  const doneKey='p911ReservedIssue';let pending=null;
   async function api(path,body){const r=await fetch(CFG.B+path,{headers:H,method:body?'POST':'GET',...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Error(d.detail||'接口不可用');return d}
   async function once(){
-   if(busy)return;busy=true;
+   if(window.__p911Busy||window.__p911RunId!==runId)return;window.__p911Busy=true;
    try{
     if(pending){await api('/api/v1/autobet/report',pending);pending=null}
     const st=await api('/api/v1/autobet/status');
     if(!st.enabled||st.dry_run||!st.gate||st.stop_requested)return;
     const home=await(await fetch('/initHome?awaken=180')).json(),issue=Number(home.lottry?.ltn);
     if(!issue||localStorage.getItem(doneKey)===String(issue))return;
-    const grant=await api('/api/v1/autobet/authorize',{issue,instance});if(!grant.allow)return;
+    const grant=await api('/api/v1/autobet/authorize',{issue,instance});if(!grant.allow||window.__p911RunId!==runId)return;
     const p=grant.plan;if(!p||p.blocked||new URL(p.site||st.site).origin!==location.origin)throw Error('计划与当前投注站不匹配');
     localStorage.setItem(doneKey,String(issue));let placed=0,uncertain=false;
     for(let i=0;i<p.numbers.length;i+=20){
-     const allow=await api('/api/v1/autobet/authorize',{issue,instance,token:grant.token});if(!allow.allow)break;
+     if(window.__p911RunId!==runId)break;
+     try{const allow=await api('/api/v1/autobet/authorize',{issue,instance,token:grant.token});if(!allow.allow||window.__p911RunId!==runId)break;}catch(e){break;}
      try{
       const body=new URLSearchParams({'paramMap.nms':JSON.stringify(p.numbers.slice(i,i+20).map(n=>({nm:n}))),
        'paramMap.bw':'1','paramMap.ltn':String(issue),'paramMap.am':String(Math.round(Number(p.amount)*10000)),'paramMap.ock':crypto.randomUUID().replaceAll('-','')});
@@ -268,7 +277,7 @@ function buildBetScript(token, csrf, base){
     }
     pending={issue,round:p.round,group_count:p.group_count,amount:p.amount,placed,kind:p.kind||'normal',factor:p.factor||'1',token:grant.token,uncertain,note:'browser executor'};
     await api('/api/v1/autobet/report',pending);pending=null;
-   }catch(e){console.warn('执行暂停：',e.message)}finally{busy=false}
+   }catch(e){console.warn('执行暂停：',e.message)}finally{window.__p911Busy=false}
   }
   if(window.__p911Timer)clearInterval(window.__p911Timer);
   await once();window.__p911Timer=setInterval(once,20000);
@@ -291,7 +300,7 @@ $('#autobet-copy').onclick=()=>action($('#autobet-copy'),async()=>{
 
 /* 紧急停止：立刻关闭开关，执行器下一批前中止 */
 $('#ab-stop').onclick=()=>action($('#ab-stop'),async()=>{
-  if(!confirm('确认紧急停止？\n将立刻停止自动投注，执行器在当前批次结束后中止。')) return;
+  ++executionActionVersion;
   const r=await api('/api/v1/autobet/stop',{method:'POST'});
   await loadAutobet();
   toast('已紧急停止：'+String(r.stopped_at).slice(11,19));
@@ -299,14 +308,14 @@ $('#ab-stop').onclick=()=>action($('#ab-stop'),async()=>{
 
 /* 金额切换规则：实时预览 + 当前运行状态 */
 function switchPlanText(){
-  const rows=$$('.stake-row').map(x=>({count:x.querySelector('[name=group_count]').value,amount:x.querySelector('[name=amount]').value}));
+  const rows=$$('.stake-row').map(x=>({count:stakeChoice(x.querySelector('[name=group_count]').value)[3],amount:x.querySelector('[name=amount]').value}));
   if(!rows.length) return '';
   const seq=rows.map(r=>r.count).join(' → ');
   const loss=Number($('#switch-loss').value)||0, high=Number($('#switch-amount').value)||0, target=Number($('#switch-target').value)||0;
   const on=$('#switch-enabled').checked;
   if(!on) return `当前计划 <b>${seq}</b>，未启用切换：每期按各把原金额循环。`;
   return `当前计划 <b>${seq}</b>。<br>连续 <b>${loss}</b> 把 ❌ 后，<b>下一把从第 1 把（${rows[0].count} 组）重新开始</b>，每组改按高金额 <b>${high}</b> 元；`
-       + `高金额阶段累计 <b>${target}</b> 把兄弟命中（480/516，720 不算）后，<b>下一把恢复正常金额</b>。`;
+       + `高金额阶段累计 <b>${target}</b> 把兄弟命中（480/516，720和729不算）后，<b>下一把恢复正常金额</b>。`;
 }
 function renderSwitchRule(){
   if(!$('#switch-preview')) return;
@@ -387,7 +396,8 @@ $('#sp-save').onclick=()=>action($('#sp-save'),async()=>{
     double_within:Number($('#sp-within').value),double_factor:$('#sp-factor').value};
   await api('/api/v1/staking/special',{method:'PUT',body:JSON.stringify(rule)});
   // 同时打开状态机里的特殊规则开关（云端执行时生效）
-  toast('特殊规则已保存；执行器会按此规则下单（模拟模式下不会真实提交）');
+  ++executionActionVersion;await loadAutobet();
+  toast('特殊规则已保存，当前执行已停止；需人工重新开始');
 });
 
 /* 重置把次（模拟预演常用） */
@@ -402,7 +412,8 @@ $('#autobet-reset').onclick=()=>action($('#autobet-reset'),async()=>{
 function renderGate(s){
   const chip=$('#ab-gate-chip'), btn=$('#ab-gate-toggle');
   if(!chip) return;
-  const open=s.gate!==false;
+  const open=s.gate===true;
+  btn.dataset.epoch=s.control_epoch;
   chip.textContent='闸门：'+(open?'开启（允许下单）':'关闭（禁止下单）');
   chip.className='chip'+(open?'':' off');
   btn.textContent=open?'关闭闸门':'开启闸门';
@@ -411,7 +422,7 @@ function renderGate(s){
 $('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
   const next=$('#ab-gate-toggle').dataset.next!=='false';
   if(!next && !confirm('关闭闸门后：执行器即使运行也会被拒绝下单（模拟测试也不会花钱）。确认关闭？')) return;
-  await api('/api/v1/autobet/gate',{method:'POST',body:JSON.stringify({open:next})});
+  await api('/api/v1/autobet/gate',{method:'POST',body:JSON.stringify({open:next,expected_epoch:$('#ab-gate-toggle').dataset.epoch})});
   await loadAutobet();
   toast(next?'闸门已开启：允许下单':'闸门已关闭：任何下单请求都会被拒绝');
 });
@@ -422,6 +433,11 @@ $('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
   if(!el) return;
   el.addEventListener('change',()=>{
     executionInputsDirty=true;
+    if(id==='autobet-dry'&&el.checked){
+      ++executionActionVersion;
+      action(el,async()=>{await api('/api/settings',{method:'PUT',body:JSON.stringify({autobet_dry_run:true})});await loadAutobet();toast('模拟保护已生效：已停止并关闭闸门，需点击模拟开始');});
+      return;
+    }
     const name={ 'autobet-dry':'模拟模式','autobet-lead':'提前停盘秒数','autobet-maxsingle':'单期金额上限',
                  'autobet-site':'站点地址','autobet-account':'投注账号' }[id];
     toast(name+'已改动但未保存：点「保存连接设置」生效（点开始也会一并保存）');
@@ -441,12 +457,13 @@ $('#autobet-save2').onclick=()=>action($('#autobet-save2'),async()=>{
 
 /* 分开的停止：模拟停止不动闸门；真实停止同时关闸 */
 $('#sim-stop').onclick=()=>action($('#sim-stop'),async()=>{
+  ++executionActionVersion;
   const r=await api('/api/v1/autobet/stop_sim',{method:'POST'});
   await loadAutobet();
-  toast('已停止模拟（闸门保持不变：'+(r.gate?'开启':'关闭')+'）');
+  toast('已停止并关闭闸门，旧的执行授权已撤销');
 });
 $('#real-stop').onclick=()=>action($('#real-stop'),async()=>{
-  if(!confirm('停止真实下单？将立刻关闭开关并关闭闸门。')) return;
+  ++executionActionVersion;
   await api('/api/v1/autobet/stop_soft',{method:'POST'});
   await loadAutobet();
   toast('已停止真实下单并关闭闸门');
