@@ -120,6 +120,7 @@ $('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form')
 
 /* ---------- 自动投注（云端计划 + 本机执行器） ---------- */
 let autobetData=null,executionInputsDirty=false,strategyBusy=false,configBusy=false,planConfigDirty=false,specialConfigDirty=false,autobetGeneration=0,runModeInitialized=false;
+let autobetRefreshTask=null,autobetRefreshController=null;
 const strategyNames={plan:'普通计划',high:'高金额切换',special:'特殊规则'};
 async function executionChange(button,fn){
  if(strategyBusy||configBusy){toast('正在保存或切换执行设置，请等待完成',true);return;}
@@ -158,6 +159,13 @@ function renderAutobetStatus(s){
   $('#ab-state-sub').textContent = on
     ? (modeText + (s.stop_requested?' · 已请求停止（本期后不再开新期）':' · 每 20 秒检查新一期'))
     : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未运行');
+  if(!on&&stop?.reason)$('#ab-state-sub').textContent+=' · '+stop.reason;
+  const waiting=(s.orders||[]).find(o=>o.status==='pending');
+  const last=(s.orders||[])[0];
+  $('#execution-live-health').textContent='页面最近刷新 '+(s.updated||new Date().toISOString()).slice(11,19)
+    +(waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 服务器已停止')
+    +(last?' · 最近回报第'+last.issue+'期':' · 尚无执行回报');
+  if(on&&last?.created&&Date.now()-Date.parse(last.created)>480000)$('#execution-live-health').textContent+=' · 已超过8分钟无新回报，请检查采集、会话或执行器；运行开关不等于正在推进';
   const n=s.next||{};
   $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
   const cap=s.max_single||0, stake=n.blocked?0:Number(n.amount)*n.count;
@@ -167,7 +175,6 @@ function renderAutobetStatus(s){
   if(capEl) capEl.textContent = cap>0 ? ('单期上限 '+cap+' 元' + (stake>cap? ' · 本期 '+stake.toFixed(2)+' 元已超限，会被拒绝':'')) : '未设单期上限';
   if(capEl&&s.reconciliation_count)capEl.textContent+=` · 有${s.reconciliation_count}条执行记录待核对，禁止新执行`;
   $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
-  const last=(s.orders||[])[0];
   $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
   $('#ab-kpi-spent').textContent = s.stake_total? (s.stake_total+' 元') : '0 元';
   $('#ab-kpi-left').textContent = '按计划';
@@ -206,7 +213,19 @@ function renderAutobet(s){
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
 }
-async function loadAutobet(force=false){if((strategyBusy||configBusy)&&!force)return;const generation=++autobetGeneration;const s=await api('/api/v1/autobet/status');if(generation!==autobetGeneration)return;renderAutobet(s)}
+function loadAutobet(force=false){
+ if((strategyBusy||configBusy)&&!force)return Promise.resolve();
+ if(autobetRefreshTask&&!force)return autobetRefreshTask;
+ if(force)autobetRefreshController?.abort();
+ const generation=++autobetGeneration;
+ const controller=typeof AbortController==='undefined'?null:new AbortController();autobetRefreshController=controller;
+ const timer=controller?setTimeout(()=>controller.abort(),20000):null;
+ const task=(async()=>{
+  try{const s=await api('/api/v1/autobet/status',controller?{signal:controller.signal}:{});if(generation===autobetGeneration)renderAutobet(s)}
+  catch(e){if(generation===autobetGeneration)$('#execution-live-health').textContent='页面刷新失败，当前显示上次状态；服务器可能仍在运行，请刷新核对。'+(e.name==='AbortError'?'请求已超时。':e.message);throw e}
+  finally{if(timer)clearTimeout(timer);if(autobetRefreshTask===task){autobetRefreshTask=null;autobetRefreshController=null;}}
+ })();autobetRefreshTask=task;return task;
+}
 $('#execution-strategy').onchange=()=>action($('#execution-strategy'),async()=>{
  const strategy=$('#execution-strategy').value;
  if(!autobetData){toast('正在读取执行状态，请稍后选择',true);return;}
@@ -532,6 +551,9 @@ async function loadSpecial(){
 function clearSpecialResult(){specialCsv='';$('#sp-csv').hidden=true;$('#sp-summary').innerHTML='';$('#sp-daily').innerHTML='';$('#sp-rows').innerHTML='';$('#sp-note').textContent='配置已变化，请重新运行模拟。'}
 for(const id of ['sp-enabled','sp-loss','sp-mode','sp-amount','sp-dloss','sp-within','sp-factor','sp-start','sp-end'])$('#'+id).addEventListener('change',clearSpecialResult);
 setInterval(()=>{if(!$('#app').hidden&&activePage==='staking'){loadAutobet().catch(()=>{});loadSite()}},10000);
+function refreshExecutionOnReturn(){if(!document.hidden&&!$('#app').hidden&&activePage==='staking'){loadAutobet(true).catch(()=>{});loadServerSession().catch(()=>{});}}
+document.addEventListener('visibilitychange',refreshExecutionOnReturn);
+window.addEventListener?.('pageshow',refreshExecutionOnReturn);
 $('#autobet-orders').addEventListener('click',event=>{
  const button=event.target.closest('[data-review]');if(!button)return;
  const issue=Number(button.dataset.review);
