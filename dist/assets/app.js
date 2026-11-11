@@ -328,8 +328,12 @@ function buildBetScript(token, csrf, base){
        'paramMap.bw':'1','paramMap.ltn':String(issue),'paramMap.am':String(Math.round(Number(p.amount)*10000)),'paramMap.ock':crypto.randomUUID().replaceAll('-','')});
       const response=await fetch('/lot/beting',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body});
       if(!response.ok)throw Error('提交结果未知');const r=await response.json();
-      if(r.scc==null)throw Error('成交结果未知');placed+=Number(r.scc);
-      if(Number(r.fdc)||Number(r.scc)!==Math.min(20,p.numbers.length-i))break;
+      const count=v=>{if(typeof v==='number'&&Number.isSafeInteger(v))return v;if(typeof v==='string'&&/^[0-9]+$/.test(v)&&Number.isSafeInteger(Number(v)))return Number(v);throw Error('成交数量格式异常')};
+      if(!r||typeof r!=='object'||Array.isArray(r)||r.scc==null)throw Error('成交结果未知');
+      const accepted=count(r.scc),failed=count(r.fdc??0),size=Math.min(20,p.numbers.length-i);
+      if(accepted<0||failed<0||accepted>size||failed>size||accepted+failed>size)throw Error('成交数量不一致');
+      placed+=accepted;
+      if(failed||accepted!==size)break;
      }catch(e){uncertain=true;break}
     }
     pending={issue,round:p.round,group_count:p.group_count,amount:p.amount,placed,kind:p.kind||'normal',factor:p.factor||'1',token:grant.token,uncertain,note:'browser executor'};
