@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261111-console-v080"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261111-console-v080" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261113-reconcile-v088"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261113-reconcile-v088" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -23,7 +23,7 @@
 <div class="execution-console-body">
 <div class="execution-selectors"><label>执行方案<select id="execution-strategy"><option value="plan">普通计划 · 按各把金额</option><option value="high">高金额切换 · 连错后切换金额</option><option value="special">特殊规则 · 等命中后打特殊把</option></select></label><label>启动方式<select id="execution-mode"><option value="single">单期 · 完成本期后自动停止</option><option value="continuous">连续 · 每期按所选方案运行</option></select></label></div>
 <p id="execution-strategy-description" class="field-note" role="status">正在读取当前执行方案…</p>
-<p id="execution-readiness" class="execution-readiness" role="status"></p><p id="execution-live-health" class="field-note" role="status">正在读取服务器状态…</p><div class="unified-run-actions"><button id="start-sim" type="button" class="primary" disabled>开始模拟</button><button id="start-site" type="button" class="danger" disabled>开始站点执行</button><button id="ab-stop" type="button" class="danger">■ 停止并关闸</button></div>
+<p id="execution-readiness" class="execution-readiness" role="status"></p><div id="execution-recovery" class="field-note" hidden><p id="execution-recovery-note"></p><button id="recovery-continue" type="button">确认继续原把</button> <button id="recovery-reset" type="button">确认从首把重置</button></div><p id="execution-live-health" class="field-note" role="status">正在读取服务器状态…</p><div class="unified-run-actions"><button id="start-sim" type="button" class="primary" disabled>开始模拟</button><button id="start-site" type="button" class="danger" disabled>开始站点执行</button><button id="ab-stop" type="button" class="danger">■ 停止并关闸</button></div>
 <div id="autobet-statusbar" class="autobet-statusbar">
   <div class="ab-state"><span id="ab-dot" class="ab-dot"></span><div><b id="ab-state-text">加载中</b><small id="ab-state-sub">正在读取运行状态</small></div></div>
   <div class="ab-kpis">
@@ -117,8 +117,8 @@
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>日期</th><th>注数</th><th>投入（元）</th><th>返还（元）</th><th>盈亏（元）</th></tr></thead><tbody id="site-bills"></tbody></table></div>
 </article>
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
-<div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>下单笔数</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>成交核账</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>
-<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.7 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
+<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.8.8 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
 </main></div></div><div id="toast" role="status" hidden></div>
 </body></html>

@@ -136,7 +136,9 @@ function renderExecutionStrategy(s){
  const r=s.rule||{},sp=s.special_rule||{};
  const descriptions={plan:'按金额计划逐把循环，命中回首把；不启用高金额切换或特殊把。',high:`连续${r.loss_trigger||'—'}错后，下一把从首把改为每组${r.high_amount||'—'}；累计兄弟命中${r.brother_hit_target||'—'}把后恢复。`,special:`连续${sp.loss_trigger||'—'}错后仍按普通金额等待命中，命中后的下一把使用${selectionLabel(sp.special_mode||'720')}，每组${sp.special_amount||'—'}；该把无论中错都重置。特殊规则优先，不同时运行高金额切换。`};
  $('#execution-strategy-description').textContent='当前选择：'+strategyNames[selected]+'。'+descriptions[selected];
- const problems=[];if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
+ const recovery=s.recovery_required;$('#execution-recovery').hidden=!recovery;
+ if(recovery){$('#execution-recovery-note').textContent=`第${recovery.issues.join('、')}期异常记录不自动推进。请先核账并确认，当前保留第${s.state.round}把；之后明确选择恢复方式。选择后仍保持停止，不会补单。期结束后约每90秒只读核账，失败继续阻断。${s.reconciliation_error?' 核账提示：'+s.reconciliation_error.message:''}`;for(const id of ['recovery-continue','recovery-reset'])$('#'+id).disabled=!!(s.enabled||s.gate||s.reconciliation_count||s.pending||configBusy||strategyBusy);}
+ const problems=[];if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
  if(planConfigDirty)problems.push('计划参数尚未保存');
  if(selected==='special'&&specialConfigDirty)problems.push('特殊参数尚未保存');
  if(s.reconciliation_count)problems.push(`${s.reconciliation_count}条历史执行记录待核对`);
@@ -180,6 +182,12 @@ function renderAutobetStatus(s){
   $('#ab-kpi-left').textContent = '按计划';
   $('#ab-stop').disabled = false;
 }
+function orderReconciliationText(o){
+ const c=o.reconciliation;
+ if(c?.verified)return `实际${c.actual_count}组 · ${esc(c.actual_stake)}元<br><small>回执确认${o.placed}组；返${esc(c.actual_bonus)}，净${esc(c.actual_net)}；异常记录未自动推进把次</small>`;
+ if(c)return `${o.placed}组已确认<br><small>核账未通过：${esc(c.errors.join('；'))}，保持阻断</small>`;
+ return `${o.placed}组${['unknown','partial','reserved'].includes(o.status)?'<br><small>仅成功回执；实际数量待只读核账，未确认不代表未成交</small>':''}`;
+}
 function renderAutobet(s){
   autobetData=s;
   renderExecutionStrategy(s);
@@ -207,9 +215,9 @@ function renderAutobet(s){
       </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期计划注数 ${n.count}。上次投注期号：${s.state.last_issue??'—'}。${n.reference_code?'参考第 '+n.reference_issue+' 期 '+esc(n.reference_code)+'，各位置各排除一个数字。':''}</p>`;
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
-     <td>${o.placed}</td>
+     <td>${orderReconciliationText(o)}</td>
      <td><span class="badge ${o.status==='settled'||o.status==='simulated'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='simulated'?'模拟结算':(o.status==='partial'?'部分注单，待核对':o.status==='unknown'?'成交结果未知':o.status==='reviewed'?'已人工核对':o.status==='cancelled'?'未成交取消':'待结算'))}</span></td>
-     <td>${o.code?esc(o.code)+(o.hit==null?' 待核对':(o.hit?' ✅':' ❌')):'—'}${['reserved','partial','unknown'].includes(o.status)?` <button type="button" class="text-button" data-review="${o.issue}">人工核对</button>`:''}</td>
+     <td>${o.code?esc(o.code)+(o.hit==null?' 待核对':(o.hit?' ✅':' ❌')):'—'}${['reserved','partial','unknown','reviewed'].includes(o.status)?` <button type="button" class="text-button" data-reconcile="${o.issue}">只读核账</button>`:''}${['reserved','partial','unknown'].includes(o.status)?` <button type="button" class="text-button" data-review="${o.issue}" ${o.reconciliation?.verified?'':'disabled'}>确认实际成交</button>`:''}</td>
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
 }
@@ -261,7 +269,7 @@ async function runBet(mode, dry, btn){
   if(!dry&&$('#autobet-dry').checked){toast('模拟保护开启：请先关闭模拟并保存，再手动开始站点执行',true);return;}
   if(strategyBusy||configBusy||!autobetData){toast('正在读取、保存或切换执行方案，请稍后开始',true);return;}
   if(planConfigDirty||(autobetData.execution_strategy==='special'&&specialConfigDirty)){toast('参数尚未保存，请先保存后再开始；历史回测可以使用未保存参数',true);return;}
-  if(autobetData.strategy_reset_required||autobetData.reconciliation_count||autobetData.pending){toast('请先核对未完成订单并重置需要重置的状态；历史回测仍可使用',true);return;}
+  if(autobetData.recovery_required||autobetData.strategy_reset_required||autobetData.reconciliation_count||autobetData.pending){toast('请先核对未完成订单并重置需要重置的状态；历史回测仍可使用',true);return;}
   const strategyAtClick=$('#execution-strategy').value;
   const actionVersion=++executionActionVersion;
   const current=()=>{if(actionVersion!==executionActionVersion)throw Error('该开始操作已取消，请重新点击');};
@@ -558,12 +566,23 @@ setInterval(()=>{if(!$('#app').hidden&&activePage==='staking'){loadAutobet().cat
 function refreshExecutionOnReturn(){if(!document.hidden&&!$('#app').hidden&&activePage==='staking'){loadAutobet(true).catch(()=>{});loadServerSession().catch(()=>{});}}
 document.addEventListener('visibilitychange',refreshExecutionOnReturn);
 window.addEventListener?.('pageshow',refreshExecutionOnReturn);
+for(const [id,mode] of [['recovery-continue','continue'],['recovery-reset','reset']]){
+ $('#'+id).onclick=()=>executionChange($('#'+id),async()=>{
+  const fresh=await api('/api/v1/autobet/status');
+  if(!confirm(mode==='continue'?`确认继续当前第${fresh.state.round}把？半单不会按完整输赢推进；本次不开始运行。`:'确认从计划首把及正常金额阶段重置？本次不开始运行。'))return;
+  await api('/api/v1/autobet/recovery',{method:'POST',body:JSON.stringify({mode,expected_epoch:fresh.control_epoch})});
+  toast('恢复方式已保存，仍保持停止；请核对当前计划后手动开始');
+ });
+}
 $('#autobet-orders').addEventListener('click',event=>{
+ const read=event.target.closest('[data-reconcile]');
+ if(read){action(read,async()=>{const r=await api(`/api/v1/autobet/orders/${Number(read.dataset.reconcile)}/reconcile-request`,{method:'POST'});toast(r.message);await loadAutobet(true)});return;}
  const button=event.target.closest('[data-review]');if(!button)return;
- const issue=Number(button.dataset.review);
- if(!confirm(`请先在投注站核对第${issue}期的实际成交与金额。此操作只解除执行阻断，不自动判定输赢或推进把次；之后请重新核对当前计划。确认已核对？`))return;
- const note=prompt('填写核对依据（至少10个字，不能填写密码或Cookie）');if(!note)return;
- action(button,async()=>{const r=await api(`/api/v1/autobet/orders/${issue}/review`,{method:'POST',body:JSON.stringify({confirm:true,note})});toast(r.message);await loadAutobet()});
+ const issue=Number(button.dataset.review),o=(autobetData?.orders||[]).find(x=>x.issue===issue);
+ if(!o?.reconciliation?.verified){toast('先等待该期结束后的只读核账通过；不会补发未知订单',true);return;}
+ if(!confirm(`第${issue}期已核实实际${o.reconciliation.actual_count}组、投入${o.reconciliation.actual_stake}、返还${o.reconciliation.actual_bonus}。确认后不推进把次，仍须选择恢复方式。`))return;
+ const note=prompt('填写核对依据（至少10个字，不要填写密码或Cookie）');if(!note)return;
+ executionChange(button,async()=>{const r=await api(`/api/v1/autobet/orders/${issue}/review`,{method:'POST',body:JSON.stringify({confirm:true,note})});toast(r.message);await loadAutobet(true)});
 });
 
 let serverSession=null;

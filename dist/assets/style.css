@@ -104,3 +104,9 @@ label small.hint{display:block;font-size:11px;color:#8a9184;margin:2px 0 4px}
 @media(max-width:820px){.run-split{grid-template-columns:1fr}}
 
 .session-body{padding:0 24px 24px}.session-body .field-note{margin:12px 0}#session-login-form{display:flex;gap:18px;align-items:end;flex-wrap:wrap;margin-top:18px}#session-captcha{object-fit:contain;background:white;border:1px solid var(--line)}#session-code{max-width:160px}#session-status{line-height:1.8}
+
+/* Explicit recovery choice remains separate from any start action. */
+#execution-recovery{padding:14px 16px;border:1px solid #d8caa1;border-radius:12px;background:#fbf8ee;margin:12px 0}
+#execution-recovery p{margin:0 0 12px;line-height:1.7}
+#execution-recovery button{margin:4px 8px 4px 0}
+@media(max-width:600px){#execution-recovery button{width:100%;margin-right:0}}
