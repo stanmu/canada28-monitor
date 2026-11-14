@@ -581,8 +581,7 @@ $('#autobet-orders').addEventListener('click',event=>{
  const issue=Number(button.dataset.review),o=(autobetData?.orders||[]).find(x=>x.issue===issue);
  if(!o?.reconciliation?.verified){toast('先等待该期结束后的只读核账通过；不会补发未知订单',true);return;}
  if(!confirm(`第${issue}期已核实实际${o.reconciliation.actual_count}组、投入${o.reconciliation.actual_stake}、返还${o.reconciliation.actual_bonus}。确认后不推进把次，仍须选择恢复方式。`))return;
- const note=prompt('填写核对依据（至少10个字，不要填写密码或Cookie）');if(!note)return;
- executionChange(button,async()=>{const r=await api(`/api/v1/autobet/orders/${issue}/review`,{method:'POST',body:JSON.stringify({confirm:true,note})});toast(r.message);await loadAutobet(true)});
+ executionChange(button,async()=>{const r=await api(`/api/v1/autobet/orders/${issue}/review`,{method:'POST',body:JSON.stringify({confirm:true})});toast(r.message);await loadAutobet(true)});
 });
 
 let serverSession=null;
