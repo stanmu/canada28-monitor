@@ -165,7 +165,7 @@ function renderAutobetStatus(s){
   const waiting=(s.orders||[]).find(o=>o.status==='pending');
   const last=(s.orders||[])[0];
   $('#execution-live-health').textContent='页面最近刷新 '+(s.updated||new Date().toISOString()).slice(11,19)
-    +(waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 服务器已停止')
+    +(waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 自动执行已停止')
     +(last?' · 最近回报第'+last.issue+'期':' · 尚无执行回报');
   if(on&&last?.created&&Date.now()-Date.parse(last.created)>480000)$('#execution-live-health').textContent+=' · 已超过8分钟无新回报，请检查采集、会话或执行器；运行开关不等于正在推进';
   const n=s.next||{};
