@@ -129,6 +129,11 @@ async function executionChange(button,fn){
  await action(button,async()=>{try{await fn()}finally{await loadAutobet(true).catch(()=>{});configBusy=false;if(autobetData)renderExecutionStrategy(autobetData);}});
 }
 function renderExecutionStrategy(s){
+ // Old cached HTML can briefly load a newer JS asset during deployment.
+ // Create the advisory placeholders rather than failing on missing elements.
+ for(const [id,cls] of [['execution-recovery-advisory','field-note'],['real-session-warning','execution-readiness']]){
+  if(!$('#'+id)){const el=document.createElement('p');el.id=id;el.className=cls;el.hidden=true;el.setAttribute('role','status');$('#execution-live-health').before(el);}
+ }
  const selected=s.execution_strategy||(s.special_rule?.enabled?'special':s.rule?.enabled?'high':'plan');
  $('#execution-strategy').value=selected;
  if(!runModeInitialized){$('#execution-mode').value=s.mode||'single';runModeInitialized=true;}
@@ -137,7 +142,12 @@ function renderExecutionStrategy(s){
  const descriptions={plan:'按金额计划逐把循环，命中回首把；不启用高金额切换或特殊把。',high:`连续${r.loss_trigger||'—'}错后，下一把从首把改为每组${r.high_amount||'—'}；累计兄弟命中${r.brother_hit_target||'—'}把后恢复。`,special:`连续${sp.loss_trigger||'—'}错后仍按普通金额等待命中，命中后的下一把使用${selectionLabel(sp.special_mode||'720')}，每组${sp.special_amount||'—'}；该把无论中错都重置。特殊规则优先，不同时运行高金额切换。`};
  $('#execution-strategy-description').textContent='当前选择：'+strategyNames[selected]+'。'+descriptions[selected];
  const recovery=s.recovery_required;$('#execution-recovery').hidden=!recovery;
- if(recovery){$('#execution-recovery-note').textContent=`第${recovery.issues.join('、')}期异常记录不自动推进。请先核账并确认，当前保留第${s.state.round}把；之后明确选择恢复方式。选择后仍保持停止，不会补单。期结束后约每90秒只读核账，失败继续阻断。${s.reconciliation_error?' 核账提示：'+s.reconciliation_error.message:''}`;for(const id of ['recovery-continue','recovery-reset'])$('#'+id).disabled=!!(s.enabled||s.gate||s.reconciliation_count||s.pending||configBusy||strategyBusy);}
+ if(recovery){$('#execution-recovery-note').textContent=`第${recovery.issues.join('、')}期异常记录不自动推进，当前保留第${s.state.round}把。核账确认后自动保留当前把次，仅提示，不自动启动或补单。旧版已确认记录仍可在此选择恢复方式。${s.reconciliation_error?' 核账提示：'+s.reconciliation_error.message:''}`;for(const id of ['recovery-continue','recovery-reset'])$('#'+id).disabled=!!(s.enabled||s.gate||s.reconciliation_count||s.pending||configBusy||strategyBusy);}
+ const advisory=s.recovery_notice;$('#execution-recovery-advisory').hidden=!advisory||!!recovery;
+ if(advisory)$('#execution-recovery-advisory').textContent=`第${advisory.issue}期实际成交已核对，保留确认时的第${advisory.round}把及金额。本提醒不阻止开始，也不自动启动或补单。`;
+ const session=s.site_session||{ready:false,reason:'正在读取会话核验状态'};
+ $('#real-session-warning').hidden=session.ready;
+ $('#real-session-warning').textContent='站点执行未就绪：'+session.reason+'。请更新有效Cookie并仅检查会话；模拟和历史回测仍可使用。';
  const problems=[];if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
  if(planConfigDirty)problems.push('计划参数尚未保存');
  if(selected==='special'&&specialConfigDirty)problems.push('特殊参数尚未保存');
@@ -146,7 +156,7 @@ function renderExecutionStrategy(s){
  if(s.next?.blocked)problems.push(s.next.blocked);
  if(!s.plan_rows)problems.push('请先保存计划参数');
  $('#execution-readiness').textContent=problems.length?problems.join('；')+'。开始按钮保持禁用，历史回测不受影响。':(s.enabled?'正在按所选方案运行；需要停止时点“停止并关闸”。':'当前已停止。请核对会话、本期金额及执行保护后选择开始方式。');
- const blocked=strategyBusy||configBusy||problems.length>0;$('#start-sim').disabled=blocked;$('#start-site').disabled=blocked;$('#execution-strategy').disabled=strategyBusy||configBusy;
+ const blocked=strategyBusy||configBusy||problems.length>0;$('#start-sim').disabled=blocked;$('#start-site').disabled=blocked||!session.ready;$('#execution-strategy').disabled=strategyBusy||configBusy;
  renderSwitchRule();
 }
 function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
@@ -276,6 +286,7 @@ async function runBet(mode, dry, btn){
   await action(btn, async()=>{
     if(executionInputsDirty){await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({}))});executionInputsDirty=false;}
     const st0=await api('/api/v1/autobet/status');current();
+    if(!dry&&!st0.site_session?.ready){toast((st0.site_session?.reason||'会话未通过核验')+'；请更新有效Cookie并仅检查会话',true);return;}
     if(strategyAtClick!==st0.execution_strategy){await loadAutobet();toast('所选执行方案已变化，请核对后重新点击开始',true);return;}
     if(dry){
       toast('模拟运行：不会开闸门、不会真实下单');
@@ -580,7 +591,7 @@ $('#autobet-orders').addEventListener('click',event=>{
  const button=event.target.closest('[data-review]');if(!button)return;
  const issue=Number(button.dataset.review),o=(autobetData?.orders||[]).find(x=>x.issue===issue);
  if(!o?.reconciliation?.verified){toast('先等待该期结束后的只读核账通过；不会补发未知订单',true);return;}
- if(!confirm(`第${issue}期已核实实际${o.reconciliation.actual_count}组、投入${o.reconciliation.actual_stake}、返还${o.reconciliation.actual_bonus}。确认后不推进把次，仍须选择恢复方式。`))return;
+ if(!confirm(`第${issue}期已核实实际${o.reconciliation.actual_count}组、投入${o.reconciliation.actual_stake}、返还${o.reconciliation.actual_bonus}。确认后保留当前把次，无需再次选择恢复，不自动启动或补单。`))return;
  executionChange(button,async()=>{const r=await api(`/api/v1/autobet/orders/${issue}/review`,{method:'POST',body:JSON.stringify({confirm:true})});toast(r.message);await loadAutobet(true)});
 });
 
