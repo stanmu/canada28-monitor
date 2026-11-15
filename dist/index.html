@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261115-ack-v089"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261116-session-v0810" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; connect-src 'self' https://47.236.160.174; img-src 'self' blob: data:; base-uri 'none'; form-action 'self'"><meta name="referrer" content="strict-origin-when-cross-origin"><title>序列 · 加拿大28统计站</title><link rel="stylesheet" href="./assets/style.css?v=20261115-ack-v089"><script src="./assets/config.js?v=20261110-6" defer></script><script src="./assets/app.js?v=20261116-account-v0811" defer></script></head>
 <body>
 <section id="login" class="login-shell"><div class="login-art"><span class="eyebrow">PROJECT 911 / CANADA 28</span><h1>每一期，<br>都有据可查。</h1><p>把开奖、方案切换与连续结果<br>放在同一个清楚的时间轴里。</p><div class="art-grid" aria-hidden="true"><span>4</span><span>5</span><span>720</span></div><small>实时监测 · 每日回测 · 独立通知记录</small></div><form id="login-form" class="login-form"><span class="brand-symbol">序</span><h2>登录统计站</h2><p class="muted">使用服务器专用访问密码。</p><label>访问密码<input name="password" type="password" required autocomplete="current-password" placeholder="输入访问密码"></label><button class="primary" type="submit">进入工作台 <span>↗</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">凭据由你保管，通知密钥保存后不回显。</small></form></section>
 <div id="app" hidden>
@@ -30,7 +30,7 @@
     <div><small>本次计划</small><b id="ab-kpi-plan">—</b></div>
     <div><small>本期金额</small><b id="ab-kpi-amount">—</b></div>
     <div><small>已下注</small><b id="ab-kpi-placed">—</b></div>
-    <div><small>累计投入</small><b id="ab-kpi-spent">—</b></div>
+    <div><small>执行记录投入</small><b id="ab-kpi-spent">—</b></div>
     <div><small>金额来源</small><b id="ab-kpi-left">按计划</b><small id="ab-cap-hint" class="hint"></small></div>
   </div>
   <div class="ab-gate"><span id="ab-gate-chip" class="chip">闸门：—</span><button id="ab-gate-toggle" class="secondary" type="button">关闭闸门</button></div>
@@ -89,7 +89,7 @@
   <span>② 开关：开始/停止决定执行器是否工作</span>
   <span>③ 模拟模式：勾选后只走流程不真实提交</span></div>
 <div class="autobet-grid">
-<div class="autobet-box"><h3>1 · 连接投注站</h3><p class="field-note">先用下面按钮打开投注站登录页，在浏览器里手动完成验证码登录；登录后运行本机“登录助手”，它会把会话安全写入服务器。</p>
+<div class="autobet-box"><h3>1 · 连接投注站</h3><p class="field-note">先用下面按钮打开投注站登录页，在本机Chrome里手动完成登录；再双击项目内“运维/会话管理/同步已登录会话.command”，自动读取当前会话并安全同步，无需找Cookie。系统可能要求钥匙串授权。</p>
 <a class="primary" href="https://s4.sd3568.xyz/login.html" target="_blank" rel="noreferrer noopener">打开投注站登录页 ↗</a>
 <label>站点地址<small class="hint">投注站根地址，https 开头</small><input id="autobet-site" type="text" placeholder="https://s4.sd3568.xyz"></label>
 <label>投注账号<small class="hint">只用于页面显示与核对</small><input id="autobet-account" type="text" autocomplete="off" placeholder="站点会员账号"></label>
@@ -104,21 +104,21 @@
 <div class="autobet-actions"><button id="autobet-copy" class="secondary" type="button">复制脚本</button></div>
 </details>
 </div>
-<article class="panel" id="server-session-panel"><div class="panel-heading"><div><h2>服务器登录与会话</h2><p>登录浏览器在上海服务器运行。有效会话自动保活、同步Cookie；支持手动提供会话，失效后不自动反复登录。</p></div><div class="test-actions"><button id="session-check" type="button" class="secondary">仅检查会话</button><button id="session-prepare" type="button" class="secondary">准备 / 刷新验证码</button></div></div><div class="session-body"><p id="session-status" role="status">正在连接服务器浏览器…</p><p id="session-manual-note" class="field-note" hidden>当前采用手动会话模式：在上方连接设置粘贴你已手动登录的Cookie，保存后点“仅检查会话”。服务器只读验证身份并保活，不代填或提交账号密码。Cookie不要发到聊天里。</p><p class="field-note">每次只提交一次。失败或结果不明即锁定，服务重启也不自动重试。此功能不会下单，也不会开启执行。</p><form id="session-login-form" hidden><label>上海浏览器当前验证码<img id="session-captcha" alt="当前登录验证码" width="140" height="55"></label><label>填写图中4位数字<input id="session-code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required></label><button id="session-submit" class="primary" type="submit">仅尝试登录一次</button></form></div></article>
-<article class="panel site-panel"><div class="panel-heading"><div><h2>投注站账户 · 注单与盈亏</h2><p>由执行器每 60 秒只读同步一次；这里不产生任何投注。</p></div><span id="site-sync-at" class="muted"></span></div>
+<article class="panel" id="server-session-panel"><div class="panel-heading"><div><h2>服务器登录与会话</h2><p>登录浏览器在上海服务器运行。有效会话自动保活、同步Cookie；支持手动提供会话，失效后不自动反复登录。</p></div><div class="test-actions"><button id="session-check" type="button" class="secondary">仅检查会话</button><button id="session-prepare" type="button" class="secondary">准备 / 刷新验证码</button></div></div><div class="session-body"><p id="session-status" role="status">正在连接服务器浏览器…</p><p id="session-manual-note" class="field-note" hidden>当前采用手动会话模式：在本机Chrome登录后双击“同步已登录会话.command”自动导入并核验；也可在上方连接设置保存Cookie后点“仅检查会话”。服务器只读验证身份并保活，不代填或提交账号密码。Cookie不要发到聊天里。</p><p class="field-note">每次只提交一次。失败或结果不明即锁定，服务重启也不自动重试。此功能不会下单，也不会开启执行。</p><form id="session-login-form" hidden><label>上海浏览器当前验证码<img id="session-captcha" alt="当前登录验证码" width="140" height="55"></label><label>填写图中4位数字<input id="session-code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required></label><button id="session-submit" class="primary" type="submit">仅尝试登录一次</button></form></div></article>
+<article class="panel site-panel"><div class="panel-heading"><div><h2>投注站账户 · 注单与盈亏</h2><p>每60秒独立读取站点实际余额和完整可查账单；暂停提交期间仍同步，不产生任何投注。</p></div><span id="site-sync-at" class="muted"></span></div>
 <div class="site-kpis">
   <div><small>账户</small><b id="site-account">—</b></div>
   <div><small>可用余额</small><b id="site-balance">—</b></div>
   <div><small>信用额度</small><b id="site-credit">—</b></div>
-  <div><small>累计投入</small><b id="site-stake">—</b></div>
-  <div><small>累计中奖返还</small><b id="site-bonus">—</b></div>
-  <div><small>累计盈亏</small><b id="site-net">—</b></div>
+  <div><small>站点账单累计投入</small><b id="site-stake">—</b></div>
+  <div><small>站点账单累计返还</small><b id="site-bonus">—</b></div>
+  <div><small>站点账单累计盈亏</small><b id="site-net">—</b></div>
 </div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>日期</th><th>注数</th><th>投入（元）</th><th>返还（元）</th><th>盈亏（元）</th></tr></thead><tbody id="site-bills"></tbody></table></div>
 </article>
 <div class="panel-heading"><div><h2>注单台账</h2><p>执行器每一期回报一次；开奖后自动结算并推进把次与金额阶段。</p></div><button id="autobet-reload" class="text-button" type="button">刷新 ↻</button></div>
 <div class="table-wrap"><table><thead><tr><th>期号</th><th>把次</th><th>组数</th><th>每组金额</th><th>成交核账</th><th>状态</th><th>开奖 / 结果</th><th>回报时间</th></tr></thead><tbody id="autobet-orders"></tbody></table></div>
 </article></section>
-<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.8.10 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
+<footer><span>加拿大28 · 按连续期号计算 · 北京时间展示</span><span>统计站 v0.8.11 / <a href="https://pc28.world" target="_blank" rel="noreferrer">数据来自 pc28.world</a></span></footer>
 </main></div></div><div id="toast" role="status" hidden></div>
 </body></html>

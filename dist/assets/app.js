@@ -431,13 +431,18 @@ function renderSite(v){
   $('#site-bonus').textContent=money(s.bonus);
   const net=$('#site-net'); net.textContent=money(s.net);
   net.className=(s.net||0)>=0?'pos':'neg';
-  $('#site-sync-at').textContent=v.at? '同步于 '+String(v.at).slice(5,19).replace('T',' '):'尚未同步';
+  $('#site-sync-at').textContent=v.at? '余额读取于 '+String(v.at).slice(5,19).replace('T',' ')+(v.balance_fresh?'':'（旧值）'):'尚未同步';
+  let scope=$('#site-source-note');if(!scope){scope=document.createElement('p');scope.id='site-source-note';scope.className='field-note';$('#site-bills').closest('.table-wrap').before(scope);}
+  const range=v.first_day?`${v.first_day} 至 ${v.last_day}，${v.summary?.periods||0}期`:'尚无完整账单';
+  scope.textContent=`来源：站点实际余额与账单，不按本地回执估算。累计范围：${range}。`+
+   (v.statement_complete?`账单读取于 ${String(v.statement_at).slice(5,19).replace('T',' ')}${v.statement_fresh?'':'（旧值，等待同步）'}。`:'等待完整分页核验；不将缺失数据记为0。')+
+   (v.statement_error?' '+v.statement_error+'。':'');
   $('#site-bills').innerHTML=(v.bills||[]).length? v.bills.map(b=>{
     const cls=(b.net||0)>=0?'pos':'neg';
     return `<tr><td>${b.issue}</td><td>${esc(b.day||'—')}</td><td>${fmt(b.count)}</td>
       <td>${(b.stake||0).toFixed(2)}</td><td>${(b.bonus||0).toFixed(2)}</td>
       <td class="${cls}">${(b.net||0)>=0?'+':''}${(b.net||0).toFixed(2)}</td></tr>`}).join('')
-    : '<tr><td colspan="6" class="empty">执行器会在 60 秒内同步一次；若长时间为空，检查会话是否失效。</td></tr>';
+    : '<tr><td colspan="6" class="empty">每60秒独立读取实际账户；暂无完整账单时保留未知。暂停提交期间也会同步，不会下单。</td></tr>';
 }
 async function loadSite(){ try{ renderSite(await api('/api/v1/autobet/site')); }catch(e){} }
 
