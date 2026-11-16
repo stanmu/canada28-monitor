@@ -93,7 +93,7 @@ function refreshStakePreview(){
    const payload=stakePayload();
    const result=await api('/api/v1/staking/preview',{method:'POST',body:JSON.stringify(payload)});
    if(generation!==stakePreviewGeneration)return;
-   result.rows.forEach((r,i)=>{const el=rows.find(x=>Number(x.querySelector('[name=round]').value)===r.round);if(!el?.isConnected)return;el.querySelector('output').textContent=r.blocked?r.blocked:`${r.count}组 × ${r.amount} = ${Number(r.stake).toFixed(1)}`;el.querySelector('.stake-count-note').textContent=`基础${r.base_count}组 → 实际${r.count}组${r.reference_code?'；参考'+r.reference_code:''}；第${result.expected_issue}期参考预览${r.auto_amount?'；自动保本，实际倍数'+Number((Number(r.amount)/stakeBase()).toFixed(3))+'，假设前把全错累计'+r.cycle_loss:''}；若中本轮净'+Number(r.cycle_net_if_hit).toFixed(1)}`;});
+   result.rows.forEach((r,i)=>{const el=rows.find(x=>Number(x.querySelector('[name=round]').value)===r.round);if(!el?.isConnected)return;el.querySelector('output').textContent=r.blocked?r.blocked:`${r.count}组 × ${r.amount} = ${Number(r.stake).toFixed(1)}`;el.querySelector('.stake-count-note').textContent=`基础${r.base_count}组 → 实际${r.count}组${r.reference_code?'；参考'+r.reference_code:''}；第${result.expected_issue}期参考预览${r.auto_amount?'；自动保本，实际倍数'+Number((Number(r.amount)/stakeBase()).toFixed(3))+'，假设前把全错累计'+r.cycle_loss:''}；若中本轮净${Number(r.cycle_net_if_hit).toFixed(1)}`;});
    stakePreviewIssue=result.expected_issue;
   }catch(e){if(generation===stakePreviewGeneration)rows.forEach(x=>{if(x.isConnected)x.querySelector('output').textContent='计算失败，请重试';});}
  },300);
