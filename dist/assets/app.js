@@ -82,21 +82,39 @@ function stakeBase(){
   const a=first?Number(first.querySelector('[name=amount]').value):0;
   return Number.isFinite(a)&&a>0?a:0.1;
 }
-function addStake(round='',amount='0.1',groups=480,variant=null){
+let stakePreviewGeneration=0,stakePreviewTimer=null,stakePreviewIssue=null;
+function refreshStakePreview(){
+ const generation=++stakePreviewGeneration;clearTimeout(stakePreviewTimer);
+ $$('.stake-row output').forEach(x=>x.textContent='计算中…');
+ stakePreviewTimer=setTimeout(async()=>{
+  const rows=$$('.stake-row');if(!rows.length)return;
+  if(!$('#stake-form').checkValidity()){rows.forEach(x=>x.querySelector('output').textContent='请检查金额/把次（金额步长0.1）');return;}
+  try{
+   const payload=stakePayload();
+   const result=await api('/api/v1/staking/preview',{method:'POST',body:JSON.stringify(payload)});
+   if(generation!==stakePreviewGeneration)return;
+   result.rows.forEach((r,i)=>{const el=rows.find(x=>Number(x.querySelector('[name=round]').value)===r.round);if(!el?.isConnected)return;el.querySelector('output').textContent=r.blocked?r.blocked:`${r.count}组 × ${r.amount} = ${Number(r.stake).toFixed(1)}`;el.querySelector('.stake-count-note').textContent=`基础${r.base_count}组 → 实际${r.count}组${r.reference_code?'；参考'+r.reference_code:''}；第${result.expected_issue}期参考预览${r.auto_amount?'；自动保本，实际倍数'+Number((Number(r.amount)/stakeBase()).toFixed(3))+'，假设前把全错累计'+r.cycle_loss:''}；若中本轮净'+Number(r.cycle_net_if_hit).toFixed(1)}`;});
+   stakePreviewIssue=result.expected_issue;
+  }catch(e){if(generation===stakePreviewGeneration)rows.forEach(x=>{if(x.isConnected)x.querySelector('output').textContent='计算失败，请重试';});}
+ },300);
+}
+function addStake(round='',amount='0.1',groups=480,variant=null,excludeSums=[],excludeTriples=false){
  const selected=groups===729?variant:String(groups);
  const div=document.createElement('div');div.className='stake-row';
- const base=stakeBase();
- const multiple=(Number(amount)/base)||1;
- div.innerHTML=`<label>第几把<input name="round" type="number" min="1" max="100" value="${esc(round)}" required></label><label>号码组合<select name="group_count">${stakeOptions.map(([value,n,v,label])=>`<option value="${value}"${value===selected?' selected':''}>${label}</option>`).join('')}</select></label><label class="amount-cell">每组金额<input name="amount" type="number" min="0.1" max="1000000" step="0.1" value="${esc(amount)}" required><small>这一把每个号码下多少</small></label><label class="mult-cell">倍数<input name="multiple" type="number" min="0.1" step="0.1" value="${Number(multiple.toFixed(2))}"><small>= 第1把金额 × 倍数</small></label><div class="stake-subtotal"><span>本把合计</span><output></output></div><button type="button" class="remove" aria-label="移除此把">移除</button>`;
- const amountEl=div.querySelector('[name=amount]'), multEl=div.querySelector('[name=multiple]');
- const update=()=>{const n=stakeChoice(div.querySelector('[name=group_count]').value)[1],a=Number(amountEl.value);div.querySelector('output').textContent=a>=0.1&&Number.isFinite(a)?(n*a).toFixed(1):'—'};
- multEl.oninput=()=>{const m=Number(multEl.value);if(m>0){amountEl.value=(stakeBase()*m).toFixed(2);update();invalidateSimulation()}};
- amountEl.oninput=()=>{const a=Number(amountEl.value),b=stakeBase();if(b>0&&a>0)multEl.value=Number((a/b).toFixed(2));update()};
- div.onchange=update;div.querySelector('button').onclick=()=>{div.remove();planConfigDirty=true;if(autobetData)renderExecutionStrategy(autobetData);invalidateSimulation()};$('#stake-rows').append(div);update();
+ const base=stakeBase(),multiple=(Number(amount)/base)||1;
+ div.innerHTML=`<label>第几把<input name="round" type="number" min="1" max="100" value="${esc(round)}" required></label><label>号码组合<select name="group_count">${stakeOptions.map(([value,n,v,label])=>`<option value="${value}"${value===selected?' selected':''}>${label}</option>`).join('')}</select></label><label class="amount-cell">每组金额<input name="amount" type="number" min="0.1" max="1000000" step="0.1" value="${esc(amount)}" required><small>最低0.1，只接受0.1的整数倍</small></label><label class="mult-cell">倍数<input name="multiple" type="number" min="0.1" step="0.1" value="${Number(multiple.toFixed(2))}"><small>= 第1把金额 × 倍数</small></label><div class="stake-subtotal"><span>过滤后的本把合计</span><output aria-live="polite">计算中…</output><small class="stake-count-note"></small></div><button type="button" class="remove" aria-label="移除此把">移除</button><details class="stake-filters"><summary>排除和值 / 豹子 <span class="filter-summary"></span></summary><p class="field-note">只排除本把所选组合中的号码。和值为三位数字之和；豹子如000、111、999。交叠条件只扣除一次。</p><div class="filter-actions"><button type="button" class="secondary" data-sums="low">勾选0～5</button><button type="button" class="secondary" data-sums="high">勾选22～27</button><button type="button" class="secondary" data-sums="clear">清空和值</button></div><div class="sum-checks">${Array.from({length:28},(_,n)=>`<label><input name="exclude_sum" type="checkbox" value="${n}" aria-label="排除和值${n}"${excludeSums.includes(n)?' checked':''}>${n}</label>`).join('')}</div><label class="inline-check"><input name="exclude_triples" type="checkbox"${excludeTriples?' checked':''}>排除豹子（三位相同）</label></details>`;
+ const amountEl=div.querySelector('[name=amount]'),multEl=div.querySelector('[name=multiple]');
+ const update=()=>{const sums=[...div.querySelectorAll('[name=exclude_sum]:checked')].map(x=>x.value),triples=div.querySelector('[name=exclude_triples]').checked;div.querySelector('.filter-summary').textContent=(sums.length?'和值 '+sums.join('、'):'未排除和值')+(triples?'；去豹子':'');refreshStakePreview();};
+ multEl.oninput=()=>{const m=Number(multEl.value);if(m>0){amountEl.value=(stakeBase()*m).toFixed(2);update();invalidateSimulation();}};
+ amountEl.oninput=()=>{const a=Number(amountEl.value),b=stakeBase();if(b>0&&a>0)multEl.value=Number((a/b).toFixed(2));update();};
+ div.addEventListener('change',update);
+ div.querySelectorAll('[data-sums]').forEach(button=>button.onclick=()=>{const kind=button.dataset.sums;div.querySelectorAll('[name=exclude_sum]').forEach(x=>{if(kind==='clear')x.checked=false;else if(kind==='low'&&Number(x.value)<=5||kind==='high'&&Number(x.value)>=22)x.checked=true;});div.dispatchEvent(new Event('input',{bubbles:true}));update();});
+ div.querySelector('.remove').onclick=()=>{div.remove();planConfigDirty=true;if(autobetData)renderExecutionStrategy(autobetData);invalidateSimulation();refreshStakePreview();};
+ $('#stake-rows').append(div);update();
 }
-async function loadStake(){const s=await api('/api/v1/staking/schema');$('#stake-rows').innerHTML='';(s.rows.length?s.rows:[{round:1,group_count:480,amount:'0.1'}]).forEach(r=>addStake(r.round,r.amount,r.group_count,r.variant));const rule=s.switch_rule||{enabled:true,loss_trigger:5,high_amount:'10',brother_hit_target:5};$('#switch-enabled').checked=rule.enabled;$('#switch-loss').value=rule.loss_trigger;$('#switch-amount').value=rule.high_amount;$('#switch-target').value=rule.brother_hit_target;renderSwitchRule();renderSwitchLive();await loadSpecial();if(autobetData)renderExecutionStrategy(autobetData);if(!$('#simulation-end').value){const end=new Date(dayNow()+'T12:00:00+08:00');end.setDate(end.getDate()-1);$('#simulation-end').value=end.toISOString().slice(0,10);end.setDate(end.getDate()-6);$('#simulation-start').value=end.toISOString().slice(0,10)}}
-function stakePayload(){return {rows:$$('.stake-row').map(x=>({round:Number(x.querySelector('[name=round]').value),group_count:stakeChoice(x.querySelector('[name=group_count]').value)[1],variant:stakeChoice(x.querySelector('[name=group_count]').value)[2],amount:x.querySelector('[name=amount]').value})),switch_rule:{enabled:$('#switch-enabled').checked,loss_trigger:Number($('#switch-loss').value),high_amount:$('#switch-amount').value,brother_hit_target:Number($('#switch-target').value)}}}
-function renderSimulation(r){simulationCsv=r.csv;$('#download-simulation').hidden=false;const s=r.summary;$('#simulation-summary').innerHTML=[['实际模拟期数',fmt(s.periods)],['兄弟✅ / 无对子✅',fmt(s.brother_hits)+' / '+fmt(s.no_double_hits)],['729模式✅',fmt(s.position_hits||0)],['高金额阶段兄弟✅',fmt(s.high_brother_hits)],['进入 / 完成高金额轮次',s.high_entries+' / '+s.high_exits],['最长连续未中',s.max_loss+'期'],['累计模拟净值',fmt(s.net)]].map(([a,b])=>`<div class="total"><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join('');$('#simulation-rows').innerHTML=r.rows.map(x=>`<tr><td>${x.issue}<small>${esc(x.time.replace('T',' '))}</small></td><td>${esc(x.code)} ${x.hit?'✅':'❌'}</td><td>${x.phase} / 第${x.round}把</td><td>${esc(selectionLabel(x.variant))} / ${esc(x.amount)}</td><td>${x.high_brother_hits}</td><td>${x.next_phase} / 第${x.next_round}把</td><td>${esc(x.net)}<small>${esc(x.balance)}</small></td><td>${esc(x.event||'—')}</td></tr>`).join('');$('#simulation-note').textContent=`显示最后${r.rows.length}期，CSV包含本次全部${s.periods}期。使用区间内已采集数据；期末阶段：${s.ending_phase}，本轮高金额兄弟累计命中${s.ending_high_brother_hits}。`}
+async function loadStake(){const s=await api('/api/v1/staking/schema');$('#stake-rows').innerHTML='';(s.rows.length?s.rows:[{round:1,group_count:480,amount:'0.1'}]).forEach(r=>addStake(r.round,r.amount,r.group_count,r.variant,r.exclude_sums||[],r.exclude_triples||false));if($('#auto-break-even'))$('#auto-break-even').checked=!!s.amount_rule?.enabled;const rule=s.switch_rule||{enabled:true,loss_trigger:5,high_amount:'10',brother_hit_target:5};$('#switch-enabled').checked=rule.enabled;$('#switch-loss').value=rule.loss_trigger;$('#switch-amount').value=rule.high_amount;$('#switch-target').value=rule.brother_hit_target;renderSwitchRule();renderSwitchLive();await loadSpecial();if(autobetData)renderExecutionStrategy(autobetData);if(!$('#simulation-end').value){const end=new Date(dayNow()+'T12:00:00+08:00');end.setDate(end.getDate()-1);$('#simulation-end').value=end.toISOString().slice(0,10);end.setDate(end.getDate()-6);$('#simulation-start').value=end.toISOString().slice(0,10)}}
+function stakePayload(){return {amount_rule:{enabled:!!$('#auto-break-even')?.checked,payout:996},rows:$$('.stake-row').map(x=>({round:Number(x.querySelector('[name=round]').value),group_count:stakeChoice(x.querySelector('[name=group_count]').value)[1],variant:stakeChoice(x.querySelector('[name=group_count]').value)[2],amount:x.querySelector('[name=amount]').value,exclude_sums:[...x.querySelectorAll('[name=exclude_sum]:checked')].map(el=>Number(el.value)),exclude_triples:x.querySelector('[name=exclude_triples]').checked})),switch_rule:{enabled:$('#switch-enabled').checked,loss_trigger:Number($('#switch-loss').value),high_amount:$('#switch-amount').value,brother_hit_target:Number($('#switch-target').value)}}}
+function renderSimulation(r){simulationCsv=r.csv;$('#download-simulation').hidden=false;const s=r.summary;$('#simulation-summary').innerHTML=[['实际模拟期数',fmt(s.periods)],['兄弟✅ / 无对子✅',fmt(s.brother_hits)+' / '+fmt(s.no_double_hits)],['729模式✅',fmt(s.position_hits||0)],['高金额阶段兄弟✅',fmt(s.high_brother_hits)],['进入 / 完成高金额轮次',s.high_entries+' / '+s.high_exits],['最长连续未中',s.max_loss+'期'],['累计模拟净值',fmt(s.net)]].map(([a,b])=>`<div class="total"><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join('');$('#simulation-rows').innerHTML=r.rows.map(x=>`<tr><td>${x.issue}<small>${esc(x.time.replace('T',' '))}</small></td><td>${esc(x.code)} ${x.hit?'✅':'❌'}</td><td>${x.phase} / 第${x.round}把</td><td>${esc(selectionLabel(x.variant))}<small>实际${x.group_count}组 / 每组${esc(x.amount)}</small></td><td>${x.high_brother_hits}</td><td>${x.next_phase} / 第${x.next_round}把</td><td>${esc(x.net)}<small>${esc(x.balance)}</small></td><td>${esc(x.event||'—')}</td></tr>`).join('');$('#simulation-note').textContent=`显示最后${r.rows.length}期，CSV包含本次全部${s.periods}期。使用区间内已采集数据；期末阶段：${s.ending_phase}，本轮高金额兄弟累计命中${s.ending_high_brother_hits}。`}
 $('#run-simulation').onclick=()=>action($('#run-simulation'),async()=>{if(!$('#stake-form').reportValidity())return;const start=$('#simulation-start').value,end=$('#simulation-end').value;if(!start||!end){toast('请选择完整的起止日期',true);return}const r=await api('/api/v1/staking/simulate',{method:'POST',body:JSON.stringify({...stakePayload(),start,end})});renderSimulation(r);toast('历史模拟完成')});
 $('#download-simulation').onclick=()=>{const url=URL.createObjectURL(new Blob([simulationCsv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='历史模拟明细.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
@@ -116,7 +134,7 @@ $('#logout-mobile').onclick=()=>action($('#logout-mobile'),async()=>{await api('
 document.addEventListener('click',event=>{const a=event.target.closest('a');if(!API_BASE||!a)return;const path=a.getAttribute('href');if(!path?.startsWith('/api/'))return;event.preventDefault();const tab=a.target==='_blank'?window.open('about:blank','_blank'):null;(async()=>{try{const response=await request(path);if(!response.ok)throw Error('导出失败，请重新登录后重试');const blob=await response.blob(),url=URL.createObjectURL(blob);if(tab){tab.location=url}else{const link=document.createElement('a');link.href=url;const m=(response.headers.get('Content-Disposition')||'').match(/filename="([^"\r\n]+)"/);link.download=m?m[1]:'report';document.body.append(link);link.click();link.remove()}setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(e){if(tab)tab.close();toast(e.message,true)}})()});
 
 function invalidateSimulation(){if(!simulationCsv)return;simulationCsv='';$('#download-simulation').hidden=true;$('#simulation-summary').innerHTML='';$('#simulation-rows').innerHTML='';$('#simulation-note').textContent='配置或日期已更改，请重新运行模拟。'}
-$('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form').addEventListener('input',()=>{planConfigDirty=true;if(autobetData)renderExecutionStrategy(autobetData)});$('#stake-form').addEventListener('change',invalidateSimulation);$('#simulation-start').onchange=invalidateSimulation;$('#simulation-end').onchange=invalidateSimulation;
+$('#stake-form').addEventListener('input',invalidateSimulation);$('#stake-form').addEventListener('input',()=>{planConfigDirty=true;if(autobetData)renderExecutionStrategy(autobetData)});$('#stake-form').addEventListener('change',()=>{invalidateSimulation();refreshStakePreview();planConfigDirty=true;if(autobetData)renderExecutionStrategy(autobetData)});$('#simulation-start').onchange=invalidateSimulation;$('#simulation-end').onchange=invalidateSimulation;
 
 /* ---------- 自动投注（云端计划 + 本机执行器） ---------- */
 let autobetData=null,executionInputsDirty=false,strategyBusy=false,configBusy=false,planConfigDirty=false,specialConfigDirty=false,autobetGeneration=0,runModeInitialized=false;
@@ -200,6 +218,7 @@ function orderReconciliationText(o){
 }
 function renderAutobet(s){
   autobetData=s;
+  if(activePage==='staking'&&$$('.stake-row').length&&s.next?.reference_issue!=null&&stakePreviewIssue!==s.next.reference_issue+(s.next.variant==='729_gap'?2:1))refreshStakePreview();
   renderExecutionStrategy(s);
   renderAutobetStatus(s);
   const on=s.enabled;
@@ -209,7 +228,7 @@ function renderAutobet(s){
   if(!$('#autobet-account').value)$('#autobet-account').value=s.account||'';
   if(!executionInputsDirty){
   $('#autobet-dry').checked=!!s.dry_run;
-  $('#autobet-lead').value=s.lead_seconds||90;
+  $('#autobet-lead').value=s.lead_seconds||120;
   if(s.max_single!=null && !$('#autobet-maxsingle').dataset.touched) $('#autobet-maxsingle').value=s.max_single;
   }
   const n=s.next;
@@ -222,7 +241,7 @@ function renderAutobet(s){
         <div><small>本期合计</small><b>${esc(n.planned_stake)}</b></div>
         <div><small>金额阶段</small><b>${n.phase}</b></div>
         <div><small>连续未中</small><b>${s.state.loss} 次</b></div>
-      </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期计划注数 ${n.count}。上次投注期号：${s.state.last_issue??'—'}。${n.reference_code?'参考第 '+n.reference_issue+' 期 '+esc(n.reference_code)+'，各位置各排除一个数字。':''}</p>`;
+      </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期实际计划注数 ${n.count}（基础${n.base_group_count||n.group_count}组）。${n.exclude_sums?.length?'排除和值 '+esc(n.exclude_sums.join('、'))+'。':''}${n.exclude_triples?'已排除豹子。':''}${n.auto_amount?'自动保本：本轮累计亏损 '+esc(n.cycle_loss)+'，按996倍及0.1步长计算。':''}上次投注期号：${s.state.last_issue??'—'}。${n.reference_code?'参考第 '+n.reference_issue+' 期 '+esc(n.reference_code)+'，各位置各排除一个数字。':''}</p>`;
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
      <td>${orderReconciliationText(o)}</td>
@@ -256,7 +275,7 @@ function autobetSettingsBody(base){
   return {...base,
     autobet_dry_run:$('#autobet-dry').checked,
     autobet_site:$('#autobet-site').value.trim()||'https://s4.sd3568.xyz',
-    autobet_lead_seconds:Number($('#autobet-lead').value)||90,
+    autobet_lead_seconds:Number($('#autobet-lead').value)||120,
     autobet_account:$('#autobet-account').value.trim(),
     autobet_max_single:Number($('#autobet-maxsingle').value||0)};
 }
@@ -388,7 +407,7 @@ $('#ab-stop').onclick=()=>action($('#ab-stop'),async()=>{
 
 /* 金额切换规则：实时预览 + 当前运行状态 */
 function switchPlanText(){
-  const rows=$$('.stake-row').map(x=>({count:stakeChoice(x.querySelector('[name=group_count]').value)[3],amount:x.querySelector('[name=amount]').value}));
+  const rows=$$('.stake-row').map(x=>({count:stakeChoice(x.querySelector('[name=group_count]').value)[3],amount:x.querySelector('[name=amount]').value,exclude_sums:[...x.querySelectorAll('[name=exclude_sum]:checked')].map(el=>Number(el.value)),exclude_triples:x.querySelector('[name=exclude_triples]').checked}));
   if(!rows.length) return '';
   const seq=rows.map(r=>r.count).join(' → ');
   const loss=Number($('#switch-loss').value)||0, high=Number($('#switch-amount').value)||0, target=Number($('#switch-target').value)||0;
