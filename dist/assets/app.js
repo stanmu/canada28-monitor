@@ -216,6 +216,28 @@ function orderReconciliationText(o){
  if(c)return `${o.placed}组已确认<br><small>核账未通过：${esc(c.errors.join('；'))}，保持阻断</small>`;
  return `${o.placed}组${['unknown','partial','reserved'].includes(o.status)?'<br><small>仅成功回执；实际数量待只读核账，未确认不代表未成交</small>':''}`;
 }
+function orderReconciliationControls(o,s){
+ if(!['reserved','partial','unknown','reviewed'].includes(o.status))return '';
+ const c=o.reconciliation,stopped=!s.enabled&&!s.gate;
+ const failure=s.reconciliation_error?.issue===o.issue?s.reconciliation_error:null;
+ let hint='',label='确认实际成交',ready=!!c?.verified&&stopped;
+ if(o.status==='reviewed')hint='实际成交已核实并确认；不会补单或自动启动。';
+ else if(!stopped){hint='核账需要先停止并关闸；请使用上方“停止并关闸”。开闸后核账会暂停。';label=c?.verified?'确认前先停止并关闸':'等待停止并核账';}
+ else if(c?.verified)hint=`只读核账已通过：实际${c.actual_count}组，可确认；确认不会补单或自动启动。`;
+ else if(c){hint='明细校验未通过：'+(c.errors||[]).join('；')+'。可重新只读核账。';label='等待核账通过';}
+ else if(failure){hint=(failure.at?'最近核账 '+failure.at.slice(5,19).replace('T',' ')+'：':'')+failure.message+'。可点击“重新只读核账”；不会补单。';label='核账未完成';}
+ else{hint='等待该期结束并完成只读核账。执行器约90秒复查一次，网络失败可能延后；通过后才能确认。';label='等待核账通过';}
+ return ` <button type="button" class="text-button" data-reconcile="${o.issue}">${failure||c&&!c.verified?'重新只读核账':'只读核账'}</button>`+
+  (o.status==='reviewed'?'':` <button type="button" class="text-button" data-review="${o.issue}" ${ready?'':'disabled'}>${label}</button>`)+
+  `<small class="reconciliation-note" role="status">${esc(hint)}</small>`;
+}
+async function requestOrderReconciliation(issue){
+ const fresh=await api('/api/v1/autobet/status');
+ renderAutobet(fresh);
+ if(fresh.enabled||fresh.gate){toast('核账尚未开始：请先在“本期执行计划”点击“停止并关闸”，再点击只读核账；不会自动停掉你正在运行的计划',true);return;}
+ const r=await api(`/api/v1/autobet/orders/${issue}/reconcile-request`,{method:'POST'});
+ toast(r.message);await loadAutobet(true);
+}
 function renderAutobet(s){
   autobetData=s;
   if(activePage==='staking'&&$$('.stake-row').length&&s.next?.reference_issue!=null&&stakePreviewIssue!==s.next.reference_issue+(s.next.variant==='729_gap'?2:1))refreshStakePreview();
@@ -246,7 +268,7 @@ function renderAutobet(s){
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
      <td>${orderReconciliationText(o)}</td>
      <td><span class="badge ${o.status==='settled'||o.status==='simulated'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='simulated'?'模拟结算':(o.status==='partial'?'部分注单，待核对':o.status==='unknown'?'成交结果未知':o.status==='reviewed'?'已人工核对':o.status==='cancelled'?'未成交取消':'待结算'))}</span></td>
-     <td>${o.code?esc(o.code)+(o.hit==null?' 待核对':(o.hit?' ✅':' ❌')):'—'}${['reserved','partial','unknown','reviewed'].includes(o.status)?` <button type="button" class="text-button" data-reconcile="${o.issue}">只读核账</button>`:''}${['reserved','partial','unknown'].includes(o.status)?` <button type="button" class="text-button" data-review="${o.issue}" ${o.reconciliation?.verified?'':'disabled'}>确认实际成交</button>`:''}</td>
+     <td>${o.code?esc(o.code)+(o.hit==null?' 待核对':(o.hit?' ✅':' ❌')):'—'}${orderReconciliationControls(o,s)}</td>
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
 }
@@ -615,7 +637,7 @@ for(const [id,mode] of [['recovery-continue','continue'],['recovery-reset','rese
 }
 $('#autobet-orders').addEventListener('click',event=>{
  const read=event.target.closest('[data-reconcile]');
- if(read){action(read,async()=>{const r=await api(`/api/v1/autobet/orders/${Number(read.dataset.reconcile)}/reconcile-request`,{method:'POST'});toast(r.message);await loadAutobet(true)});return;}
+ if(read){action(read,()=>requestOrderReconciliation(Number(read.dataset.reconcile)));return;}
  const button=event.target.closest('[data-review]');if(!button)return;
  const issue=Number(button.dataset.review),o=(autobetData?.orders||[]).find(x=>x.issue===issue);
  if(!o?.reconciliation?.verified){toast('先等待该期结束后的只读核账通过；不会补发未知订单',true);return;}
