@@ -166,7 +166,7 @@ function renderExecutionStrategy(s){
  const session=s.site_session||{ready:false,reason:'正在读取会话核验状态'};
  $('#real-session-warning').hidden=session.ready;
  $('#real-session-warning').textContent='站点执行未就绪：'+session.reason+'。请更新有效Cookie并仅检查会话；模拟和历史回测仍可使用。';
- const problems=[];if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
+ const problems=[];if(s.maintenance)problems.push('网站正在维护更新，禁止开始执行；维护结束后解除');if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
  if(planConfigDirty)problems.push('计划参数尚未保存');
  if(selected==='special'&&specialConfigDirty)problems.push('特殊参数尚未保存');
  if(s.reconciliation_count)problems.push(`${s.reconciliation_count}条历史执行记录待核对`);
@@ -174,7 +174,7 @@ function renderExecutionStrategy(s){
  if(s.next?.blocked)problems.push(s.next.blocked);
  if(!s.plan_rows)problems.push('请先保存计划参数');
  $('#execution-readiness').textContent=problems.length?problems.join('；')+'。开始按钮保持禁用，历史回测不受影响。':(s.enabled?'正在按所选方案运行；需要停止时点“停止并关闸”。':'当前已停止。请核对会话、本期金额及执行保护后选择开始方式。');
- const blocked=strategyBusy||configBusy||problems.length>0;$('#start-sim').disabled=blocked;$('#start-site').disabled=blocked||!session.ready;$('#execution-strategy').disabled=strategyBusy||configBusy;
+ const blocked=strategyBusy||configBusy||s.enabled||problems.length>0;$('#start-sim').disabled=blocked;$('#start-site').disabled=blocked||!session.ready;$('#execution-strategy').disabled=strategyBusy||configBusy;
  renderSwitchRule();
 }
 function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
@@ -295,6 +295,7 @@ $('#autobet-check').onclick=()=>action($('#autobet-check'),async()=>{
   else toast('会话已保存；服务器离线或上一操作尚未完成，请稍后仅检查会话');
 });
 async function runBet(mode, dry, btn){
+  if(autobetData?.enabled){toast('当前已在运行，无需重复开始；当前批次不变');return;}
   if(!dry&&$('#autobet-dry').checked){toast('模拟保护开启：请先关闭模拟并保存，再手动开始站点执行',true);return;}
   if(strategyBusy||configBusy||!autobetData){toast('正在读取、保存或切换执行方案，请稍后开始',true);return;}
   if(planConfigDirty||(autobetData.execution_strategy==='special'&&specialConfigDirty)){toast('参数尚未保存，请先保存后再开始；历史回测可以使用未保存参数',true);return;}
@@ -303,8 +304,10 @@ async function runBet(mode, dry, btn){
   const actionVersion=++executionActionVersion;
   const current=()=>{if(actionVersion!==executionActionVersion)throw Error('该开始操作已取消，请重新点击');};
   await action(btn, async()=>{
-    if(executionInputsDirty){await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({}))});executionInputsDirty=false;}
-    const st0=await api('/api/v1/autobet/status');current();
+    let st0=await api('/api/v1/autobet/status');current();
+    if(st0.enabled){renderAutobet(st0);toast('当前已在运行，无需重复开始；未修改任何设置');return;}
+    if(executionInputsDirty){await api('/api/settings',{method:'PUT',body:JSON.stringify(autobetSettingsBody({}))});executionInputsDirty=false;st0=await api('/api/v1/autobet/status');current();}
+    if(st0.enabled){renderAutobet(st0);toast('执行已由其他页面开启，本次不重复开始');return;}
     if(!dry&&!st0.site_session?.ready){toast((st0.site_session?.reason||'会话未通过核验')+'；请更新有效Cookie并仅检查会话',true);return;}
     if(strategyAtClick!==st0.execution_strategy){await loadAutobet();toast('所选执行方案已变化，请核对后重新点击开始',true);return;}
     if(dry){
@@ -328,6 +331,7 @@ async function runBet(mode, dry, btn){
     await loadAutobet();
     toast((dry?'已开始模拟：':'已开始站点执行：')+strategyNames[st0.execution_strategy||'plan']+' · '+(mode==='single'?'单期':'连续'));
   });
+  if(autobetData)renderExecutionStrategy(autobetData);
 }
 async function realConfirmBody(){
   return {autobet_confirm_real:true};
