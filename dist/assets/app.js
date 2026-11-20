@@ -170,7 +170,7 @@ function renderExecutionStrategy(s){
  const problems=[];if(s.maintenance)problems.push('网站正在维护更新，禁止开始执行；维护结束后解除');if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
  if(planConfigDirty)problems.push('计划参数尚未保存');
  if(selected==='special'&&specialConfigDirty)problems.push('特殊参数尚未保存');
- if(s.reconciliation_count)problems.push(`${s.reconciliation_count}条历史执行记录待核对`);
+ if(s.reconciliation_count){const live=(s.orders||[]).filter(o=>activeReservation(o,s)).length;problems.push(live===s.reconciliation_count?'本期已预留，等待执行器提交回报':`${s.reconciliation_count}条历史执行记录待核对`);}
  if(s.pending)problems.push(`${s.pending}条订单待结算`);
  if(s.next?.blocked)problems.push(s.next.blocked);
  if(!s.plan_rows)problems.push('请先保存计划参数');
@@ -179,6 +179,29 @@ function renderExecutionStrategy(s){
  renderSwitchRule();
 }
 function autobetBadge(text,kind){const el=$('#autobet-badge');if(!el)return;el.textContent=text;el.className='badge '+(kind||'neutral')}
+function activeReservation(o,s,now=Date.now()){
+ const age=now-Date.parse(o?.created||'');
+ return !!s?.enabled&&o?.status==='reserved'&&!o.reconciliation&&Number.isFinite(age)&&age>=0&&age<300000;
+}
+function executionProgressMessage(s,source=statusData,now=Date.now()){
+ const orders=s.orders||[],last=orders[0],waiting=orders.find(o=>o.status==='pending');
+ const submitting=orders.find(o=>activeReservation(o,s,now));
+ let text='页面最近刷新 '+(s.updated||new Date(now).toISOString()).slice(11,19)
+   +(submitting?' · 第'+submitting.issue+'期已预留，等待本期提交回报，请勿重复开始':waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 自动执行已停止')
+   +(last?' · 最近执行记录第'+last.issue+'期':' · 尚无执行回报');
+ if(!s.enabled&&s.auto_recovery?.eligible)text+=' · 自动只读恢复检查中：'+(s.auto_recovery.last_result||'等待连接和成交核验，未知单不重发');
+ if(s.enabled&&last?.created&&now-Date.parse(last.created)>480000){
+  const latest=source?.latest,stamp=latest?.time||'';
+  const drawAt=Date.parse(stamp&&(/[zZ]$|[+-]\d\d:\d\d$/.test(stamp)?stamp:stamp+'+08:00'));
+  const syncAge=now-Date.parse(source?.last_sync||'');
+  const fresh=Number.isFinite(syncAge)&&syncAge>=0&&syncAge<180000&&!source.collector_error&&!source.gap&&!source.conflict;
+  const unresolved=Number(s.reconciliation_count)>0||orders.some(o=>['reserved','unknown','partial'].includes(o.status));
+  if(fresh&&!unresolved&&latest&&last.issue>=latest.issue&&Number.isFinite(drawAt)&&now-drawAt>480000)
+   text+=' · 最新开奖仍为第'+latest.issue+'期（'+stamp.slice(11,19)+'），采集正在同步，可能处于开奖间隔；等待新开奖，不重复提交';
+  else text+=' · 已超过8分钟无新回报，请检查采集、会话或执行器；运行开关不等于正在推进';
+ }
+ return text;
+}
 function renderAutobetStatus(s){
   try{renderGate(s)}catch(e){}
   const on=s.enabled;
@@ -191,13 +214,8 @@ function renderAutobetStatus(s){
     ? (modeText + (s.stop_requested?' · 已请求停止（本期后不再开新期）':' · 每 20 秒检查新一期'))
     : (stop? '停止于 '+String(stop.at).slice(5,19).replace('T',' ') : '未运行');
   if(!on&&stop?.reason)$('#ab-state-sub').textContent+=' · '+stop.reason;
-  const waiting=(s.orders||[]).find(o=>o.status==='pending');
   const last=(s.orders||[])[0];
-  $('#execution-live-health').textContent='页面最近刷新 '+(s.updated||new Date().toISOString()).slice(11,19)
-    +(waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 自动执行已停止')
-    +(last?' · 最近回报第'+last.issue+'期':' · 尚无执行回报');
-  if(!on&&s.auto_recovery?.eligible)$('#execution-live-health').textContent+=' · 自动只读恢复检查中：'+(s.auto_recovery.last_result||'等待连接和成交核验，未知单不重发');
-  if(on&&last?.created&&Date.now()-Date.parse(last.created)>480000)$('#execution-live-health').textContent+=' · 已超过8分钟无新回报，请检查采集、会话或执行器；运行开关不等于正在推进';
+  $('#execution-live-health').textContent=executionProgressMessage(s);
   const n=s.next||{};
   $('#ab-kpi-plan').textContent = n.blocked? '待配置计划' : ('第 '+n.round+' 把 · '+n.group_count+' 组');
   const cap=s.max_single||0, stake=n.blocked?0:Number(n.amount)*n.count;
@@ -205,14 +223,15 @@ function renderAutobetStatus(s){
   if(ra) ra.textContent = n.blocked? '—' : (stake.toFixed(2)+' 元');
   const capEl=$('#ab-cap-hint');
   if(capEl) capEl.textContent = cap>0 ? ('单期上限 '+cap+' 元' + (stake>cap? ' · 本期 '+stake.toFixed(2)+' 元已超限，会被拒绝':'')) : '未设单期上限';
-  if(capEl&&s.reconciliation_count)capEl.textContent+=` · 有${s.reconciliation_count}条执行记录待核对，禁止新执行`;
+  if(capEl&&s.reconciliation_count){const live=(s.orders||[]).filter(o=>activeReservation(o,s)).length;capEl.textContent+=live===s.reconciliation_count?' · 本期已预留，等待执行回报，禁止重复提交':` · 有${s.reconciliation_count}条执行记录待核对，禁止新执行`;}
   $('#ab-kpi-amount').textContent = n.blocked? '—' : (n.amount+' × '+n.count+' 注 ≈ '+(Number(n.amount)*n.count).toFixed(2));
   $('#ab-kpi-placed').textContent = last? (last.placed+' 注 · 第'+last.issue+'期') : '—';
   $('#ab-kpi-spent').textContent = s.stake_total? (s.stake_total+' 元') : '0 元';
   $('#ab-kpi-left').textContent = '按计划';
   $('#ab-stop').disabled = false;
 }
-function orderReconciliationText(o){
+function orderReconciliationText(o,s=autobetData){
+ if(activeReservation(o,s))return `${o.placed}组回执已确认<br><small>本期已预留，等待执行器完成回报；不代表实际仅成交这些组数。</small>`;
  const c=o.reconciliation;
  if(c?.verified)return `实际${c.actual_count}组 · ${esc(c.actual_stake)}元<br><small>回执确认${o.placed}组；返${esc(c.actual_bonus)}，净${esc(c.actual_net)}；异常记录未自动推进把次</small>`;
  if(c)return `${o.placed}组已确认<br><small>核账未通过：${esc(c.errors.join('；'))}，保持阻断</small>`;
@@ -220,6 +239,7 @@ function orderReconciliationText(o){
 }
 function orderReconciliationControls(o,s){
  if(!['reserved','partial','unknown','reviewed'].includes(o.status))return '';
+ if(activeReservation(o,s))return '<small class="reconciliation-note" role="status">正在等待本期提交回报，请勿重复开始。如需中止，请使用上方“停止并关闸”。</small>';
  const c=o.reconciliation,stopped=!s.enabled&&!s.gate;
  const failure=s.reconciliation_error?.issue===o.issue?s.reconciliation_error:null;
  let hint='',label='确认实际成交',ready=!!c?.verified&&stopped;
@@ -268,8 +288,8 @@ function renderAutobet(s){
       </div><p class="field-note">执行器会把 ${n.count} 个号码逐个下注，每个 ${esc(n.amount)}；本期实际计划注数 ${n.count}（基础${n.base_group_count||n.group_count}组）。${n.exclude_sums?.length?'排除和值 '+esc(n.exclude_sums.join('、'))+'。':''}${n.exclude_triples?'已排除豹子。':''}${n.history_count?'每个和值2～25排除开奖前最近'+n.history_count+'期完整号码。':''}${n.auto_amount?'自动保本：本轮累计亏损 '+esc(n.cycle_loss)+'，按996倍及0.1步长计算。':''}上次投注期号：${s.state.last_issue??'—'}。${n.reference_code?'参考第 '+n.reference_issue+' 期 '+esc(n.reference_code)+'，各位置各排除一个数字。':''}</p>`;
   $('#autobet-orders').innerHTML = s.orders.length ? s.orders.map(o=>`<tr>
      <td>${o.issue}</td><td>第${o.round}把</td><td>${o.group_count}</td><td>${esc(o.amount)}</td>
-     <td>${orderReconciliationText(o)}</td>
-     <td><span class="badge ${o.status==='settled'||o.status==='simulated'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='simulated'?'模拟结算':(o.status==='partial'?'部分注单，待核对':o.status==='unknown'?'成交结果未知':o.status==='reviewed'?'已人工核对':o.status==='cancelled'?'未成交取消':'待结算'))}</span></td>
+     <td>${orderReconciliationText(o,s)}</td>
+     <td><span class="badge ${o.status==='settled'||o.status==='simulated'?'':(o.status==='partial'?'warn':'neutral')}">${o.status==='settled'?'已结算':(o.status==='simulated'?'模拟结算':(o.status==='partial'?'部分注单，待核对':o.status==='unknown'?'成交结果未知':o.status==='reviewed'?'已人工核对':o.status==='cancelled'?'未成交取消':activeReservation(o,s)?'等待提交回报':'待结算'))}</span></td>
      <td>${o.code?esc(o.code)+(o.hit==null?' 待核对':(o.hit?' ✅':' ❌')):'—'}${orderReconciliationControls(o,s)}</td>
      <td>${esc((o.created||'').slice(5,19).replace('T',' '))}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">尚无注单。启用后由本机执行器每期回报一条。</td></tr>';
