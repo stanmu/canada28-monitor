@@ -75,6 +75,7 @@ async function loadReports(){
  const start=$('#report-start').value,end=$('#report-end').value,key=$('#report-case').value,generation=++reportsGeneration;
  if(!start||!end)return;
  const saved=key==='saved';
+ $('#png-export').hidden=saved;$('#send-report').hidden=saved;$('#saved-report-detail').hidden=!saved;
  if(saved){savedReport=null;$('#saved-report-note').textContent='正在读取已保存计划并回测…';}
  const data=await api(saved?`/api/v1/staking/saved_report?start=${start}&end=${end}`:`/api/reports?start=${start}&end=${end}`);
  if(generation!==reportsGeneration||key!==$('#report-case').value||start!==$('#report-start').value||end!==$('#report-end').value)return;
