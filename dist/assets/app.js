@@ -182,13 +182,13 @@ function renderExecutionStrategy(s){
  const descriptions={plan:'按金额计划逐把循环，命中回首把；不启用高金额切换或特殊把。',high:`连续${r.loss_trigger||'—'}错后，下一把从首把改为每组${r.high_amount||'—'}；累计兄弟命中${r.brother_hit_target||'—'}把后恢复。`,special:`连续${sp.loss_trigger||'—'}错后仍按普通金额等待命中，命中后的下一把使用${selectionLabel(sp.special_mode||'720')}，每组${sp.special_amount||'—'}；该把无论中错都重置。特殊规则优先，不同时运行高金额切换。`};
  $('#execution-strategy-description').textContent='当前选择：'+strategyNames[selected]+'。'+descriptions[selected];
  const recovery=s.recovery_required;$('#execution-recovery').hidden=!recovery;
- if(recovery){$('#execution-recovery-note').textContent=`第${recovery.issues.join('、')}期异常记录不自动推进，当前保留第${s.state.round}把。核账确认后自动保留当前把次，仅提示，不自动启动或补单。旧版已确认记录仍可在此选择恢复方式。${s.reconciliation_error?' 核账提示：'+s.reconciliation_error.message:''}`;for(const id of ['recovery-continue','recovery-reset'])$('#'+id).disabled=!!(s.enabled||s.gate||s.reconciliation_count||s.pending||configBusy||strategyBusy);}
+ if(recovery){$('#execution-recovery-note').textContent=`第${recovery.issues.join('、')}期正在自动只读核账，当前保留第${s.state.round}把。实际号码与金额核实后自动入账；部分成交不按完整输赢推进，也不补发旧期。${s.auto_recovery?.eligible?'原连续运行将在连接及核账通过后自动恢复，无需开闸或确认。':'手动停止仍有效，核账不会替你开启执行。'}${s.reconciliation_error?' 核账提示：'+s.reconciliation_error.message:''}`;for(const id of ['recovery-continue','recovery-reset'])$('#'+id).disabled=!!(s.enabled||s.gate||s.reconciliation_count||s.pending||configBusy||strategyBusy);}
  const advisory=s.recovery_notice;$('#execution-recovery-advisory').hidden=!advisory||!!recovery;
- if(advisory)$('#execution-recovery-advisory').textContent=`第${advisory.issue}期实际成交已核对，保留确认时的第${advisory.round}把及金额。本提醒不阻止开始，也不自动启动或补单。`;
+ if(advisory)$('#execution-recovery-advisory').textContent=`第${advisory.issue}期实际成交已核对，保留第${advisory.round}把及金额。本提醒不阻止开始，旧期不补发。自动恢复只延续原连续运行授权，手动停止仍有效。`;
  const session=s.site_session||{ready:false,reason:'正在读取会话核验状态'};
  $('#real-session-warning').hidden=session.ready;
  $('#real-session-warning').textContent='站点执行未就绪：'+session.reason+'。请更新有效Cookie并仅检查会话；模拟和历史回测仍可使用。';
- const problems=[];if(s.maintenance)problems.push('网站正在维护更新，禁止开始执行；维护结束后解除');if(recovery)problems.push('异常恢复把次尚未明确选择');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
+ const problems=[];if(s.maintenance)problems.push('网站正在维护更新，禁止开始执行；维护结束后解除');if(recovery)problems.push('异常订单正在自动核账');if(s.strategy_reset_required)problems.push('方案已切换：先核对旧订单，再重置把次');
  if(planConfigDirty)problems.push('计划参数尚未保存');
  if(selected==='special'&&specialConfigDirty)problems.push('特殊参数尚未保存');
  if(s.reconciliation_count){const live=(s.orders||[]).filter(o=>activeReservation(o,s)).length;problems.push(live===s.reconciliation_count?'本期已预留，等待执行器提交回报':`${s.reconciliation_count}条历史执行记录待核对`);}
@@ -215,6 +215,7 @@ function executionProgressMessage(s,source=statusData,now=Date.now()){
   if(seconds>0)text+=' · 网络恢复等待 '+Math.floor(seconds/60)+'分'+String(seconds%60).padStart(2,'0')+'秒；到时仍须只读核验，未知单不重发';
   else text+=' · 自动只读恢复检查中：'+(recovery.last_result||(seconds===null?'等待时间不可确认，请手动核对':'等待连接和成交核验，未知单不重发'));
  }
+ if(!s.enabled&&s.auto_recovery?.cancelled)text+=' · 自动恢复已取消：'+(s.auto_recovery.cancel_reason||'手动控制已变化');
  if(s.enabled&&last?.created&&now-Date.parse(last.created)>480000){
   const latest=source?.latest,stamp=latest?.time||'';
   const drawAt=Date.parse(stamp&&(/[zZ]$|[+-]\d\d:\d\d$/.test(stamp)?stamp:stamp+'+08:00'));
@@ -595,7 +596,9 @@ function renderGate(s){
   btn.dataset.epoch=s.control_epoch;
   chip.textContent='闸门：'+(open?'开启（允许下单）':'关闭（禁止下单）');
   chip.className='chip'+(open?'':' off');
-  btn.textContent=open?'关闭闸门':'开启闸门';
+  const waiting=!open&&(s.auto_recovery?.eligible||s.reconciliation_count||s.pending);
+  btn.disabled=!!waiting;
+  btn.textContent=open?'关闭闸门':waiting?'自动核账中，无需开闸':'开启闸门';
   btn.dataset.next=open?'false':'true';
 }
 $('#ab-gate-toggle').onclick=()=>action($('#ab-gate-toggle'),async()=>{
