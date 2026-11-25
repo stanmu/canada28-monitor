@@ -195,7 +195,7 @@ function renderExecutionStrategy(s){
  if(s.pending)problems.push(`${s.pending}条订单待结算`);
  if(s.next?.blocked)problems.push(s.next.blocked);
  if(!s.plan_rows)problems.push('请先保存计划参数');
- $('#execution-readiness').textContent=problems.length?problems.join('；')+'。开始按钮保持禁用，历史回测不受影响。':(s.enabled?'正在按所选方案运行；需要停止时点“停止并关闸”。':'当前已停止。请核对会话、本期金额及执行保护后选择开始方式。');
+ $('#execution-readiness').textContent=problems.length?problems.join('；')+'。开始按钮保持禁用，历史回测不受影响。':(s.enabled?'执行开关已开启；'+executionRuntimeSummary(s).detail+'。需要停止时点“停止并关闸”。':'当前已停止。请核对会话、本期金额及执行保护后选择开始方式。');
  const blocked=strategyBusy||configBusy||s.enabled||problems.length>0;$('#start-sim').disabled=blocked;$('#start-site').disabled=blocked||!session.ready;$('#execution-strategy').disabled=strategyBusy||configBusy;
  renderSwitchRule();
 }
@@ -204,10 +204,25 @@ function activeReservation(o,s,now=Date.now()){
  const age=now-Date.parse(o?.created||'');
  return !!s?.enabled&&o?.status==='reserved'&&!o.reconciliation&&Number.isFinite(age)&&age>=0&&age<300000;
 }
+function executionRuntimeSummary(s,now=Date.now()){
+ if(!s.enabled)return s.auto_recovery?.eligible?{label:'自动恢复等待中',detail:s.auto_recovery.last_result||'等待冷却及只读核验，旧期不重发',kind:'warn'}:{label:'已停止',detail:'执行开关关闭，不提交新单',kind:'neutral'};
+ const p=s.executor_progress||{},age=now-Date.parse(p.observed_at||'');
+ const fresh=p.fresh&&p.control_epoch===String(s.control_epoch)&&Number.isFinite(age)&&age>=-5000&&age<=(p.stage==='submitting'?180000:90000);
+ const prefix=s.dry_run?'模拟 · ':'';
+ if(s.pending)return {label:prefix+'等待开奖结算',detail:'已有完整回报，等待开奖结果后推进把次',kind:'warn'};
+ if(s.reconciliation_count&&!(s.orders||[]).some(o=>activeReservation(o,s,now)))return {label:'等待成交核账',detail:'异常记录尚未核清，不补发旧单',kind:'warn'};
+ if(!fresh)return {label:'已开启 · 等待执行器状态',detail:p.available?'执行器状态回报已过期；开关开启不代表正在提交':'尚未收到执行器状态回报，不能据此认定实际提交中',kind:'warn'};
+ const labels={checking:'核对执行条件',waiting_draw:'等待开奖同步',waiting_window:'等待下一可投窗口',waiting_plan:'等待计划就绪',submitting:'已授权 · 等待提交回报',awaiting_result:'等待开奖结算',already_submitted:'本期已处理 · 等待下一期',paused:'已开启 · 执行器暂停',recovering:'连接或成交核验中',error:'执行器异常'};
+ let detail=p.detail||labels[p.stage]||'等待执行条件';
+ if(p.stage==='waiting_window')detail=`第${p.issue||'—'}期距封盘剩${p.remaining_seconds??'—'}秒，开始至少需要${p.required_seconds??'—'}秒；本期跳过，不补单`;
+ if(p.stage==='waiting_draw')detail=`等待上一期开奖结果连续入库${p.issue?'；站点当前第'+p.issue+'期':''}${p.expected_issue?'，计划当前仅到第'+p.expected_issue+'期':''}；不使用旧把次提交`;
+ if(p.stage==='submitting')detail=`第${p.issue||'—'}期已授权${p.group_count||'—'}组，等待明确回报；停止将阻断后续批次`;
+ return {label:prefix+(labels[p.stage]||'等待执行条件'),detail,kind:['checking','submitting','already_submitted'].includes(p.stage)?'':'warn'};
+}
 function executionProgressMessage(s,source=statusData,now=Date.now()){
  const orders=s.orders||[],last=orders[0],waiting=orders.find(o=>o.status==='pending');
  const submitting=orders.find(o=>activeReservation(o,s,now));
- let text='页面最近刷新 '+(s.updated||new Date(now).toISOString()).slice(11,19)
+ let text=executionRuntimeSummary(s,now).detail+' · 页面最近刷新 '+(s.updated||new Date(now).toISOString()).slice(11,19)
    +(submitting?' · 第'+submitting.issue+'期已预留，等待本期提交回报，请勿重复开始':waiting?' · 等待第'+waiting.issue+'期开奖结算后推进把次':s.enabled?' · 等待下一期满足执行条件':' · 自动执行已停止')
    +(last?' · 最近执行记录第'+last.issue+'期':' · 尚无执行回报');
  if(!s.enabled&&s.auto_recovery?.eligible){
@@ -233,7 +248,7 @@ function renderAutobetStatus(s){
   const on=s.enabled;
   const dot=$('#ab-dot');
   dot.className='ab-dot '+(on?(s.dry_run?'':'run'):'stop');
-  $('#ab-state-text').textContent = on ? (s.dry_run?'模拟运行中':'自动投注运行中') : '已停止';
+  $('#ab-state-text').textContent = executionRuntimeSummary(s).label;
   const stop=s.stop;
   const modeText = s.mode==='continuous' ? '连续运行' : '只跑本期';
   $('#ab-state-sub').textContent = on
@@ -292,7 +307,8 @@ function renderAutobet(s){
   renderExecutionStrategy(s);
   renderAutobetStatus(s);
   const on=s.enabled;
-  autobetBadge(on?(s.dry_run?'模拟运行中':'真实投注已开启'):'已停止',on?(s.dry_run?'warn':''):'neutral');
+  const actualState=executionRuntimeSummary(s);
+  autobetBadge(actualState.label,actualState.kind);
   $('#stake-exec-state').textContent=on?(s.dry_run?'模拟中':'真实投注'):'未启用';
   if(!$('#autobet-site').value)$('#autobet-site').value=s.site||'https://s4.sd3568.xyz';
   if(!$('#autobet-account').value)$('#autobet-account').value=s.account||'';
